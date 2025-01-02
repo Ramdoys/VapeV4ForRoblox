@@ -288,11 +288,11 @@ local function createMobileButton(buttonapi, position)
 
 	button.MouseButton1Down:Connect(function()
 		heldbutton = true
-		local holdtime, holdpos = tick(), inputService:GetMouseLocation()
+		local holdtime, holdpos = os.clock(), inputService:GetMouseLocation()
 		repeat
 			heldbutton = (inputService:GetMouseLocation() - holdpos).Magnitude < 6
 			task.wait()
-		until (tick() - holdtime) > 1 or not heldbutton
+		until (os.clock() - holdtime) > 1 or not heldbutton
 		if heldbutton then
 			buttonapi.Bind = {}
 			button:Destroy()
@@ -318,7 +318,7 @@ local function downloadFile(path, func)
 		if not suc or res == '404: Not Found' then
 			error(res)
 		end
-		if path:find('.lua') then
+		if string.find(path, '.lua') then
 			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res
 		end
 		writefile(path, res)
@@ -411,7 +411,7 @@ do
 		uipallet.Main = res.Main and Color3.fromRGB(unpack(res.Main)) or uipallet.Main
 		uipallet.Text = res.Text and Color3.fromRGB(unpack(res.Text)) or uipallet.Text
 		uipallet.Font = res.Font and Font.new(
-			res.Font:find('rbxasset') and res.Font
+			string.find(res.Font, 'rbxasset') and res.Font
 			or string.format('rbxasset://fonts/families/%s.json', res.Font)
 		) or uipallet.Font
 		uipallet.FontSemiBold = Font.new(uipallet.Font.Family, Enum.FontWeight.SemiBold)
@@ -859,7 +859,7 @@ components = {
 			end
 		end
 		
-		local doubleClick = tick()
+		local doubleClick = os.clock()
 		preview.MouseButton1Click:Connect(function()
 			preview.Visible = false
 			valuebox.Visible = true
@@ -872,10 +872,10 @@ components = {
 				(inputObj.UserInputType == Enum.UserInputType.MouseButton1 or inputObj.UserInputType == Enum.UserInputType.Touch)
 				and (inputObj.Position.Y - slider.AbsolutePosition.Y) > (20 * scale.Scale)
 			then
-				if doubleClick > tick() then
+				if doubleClick > os.clock() then
 					optionapi:Toggle()
 				end
-				doubleClick = tick() + 0.3
+				doubleClick = os.clock() + 0.3
 				local changed = inputService.InputChanged:Connect(function(input)
 					if input.UserInputType == (inputObj.UserInputType == Enum.UserInputType.MouseButton1 and Enum.UserInputType.MouseMovement or Enum.UserInputType.Touch) then
 						optionapi:SetValue(math.clamp((input.Position.X - bkg.AbsolutePosition.X) / bkg.AbsoluteSize.X, 0, 1))
@@ -2441,7 +2441,7 @@ mainapi.Components = setmetatable(components, {
 
 task.spawn(function()
 	repeat
-		local hue = tick() * (0.2 * mainapi.RainbowSpeed.Value) % 1
+		local hue = os.clock() * (0.2 * mainapi.RainbowSpeed.Value) % 1
 		for _, v in mainapi.RainbowTable do
 			if v.Type == 'GUISlider' then
 				v:SetValue(mainapi:Color(hue))
@@ -3898,11 +3898,11 @@ function mainapi:CreateCategory(categorysettings)
 			local heldbutton = false
 			modulebutton.MouseButton1Down:Connect(function()
 				heldbutton = true
-				local holdtime, holdpos = tick(), inputService:GetMouseLocation()
+				local holdtime, holdpos = os.clock(), inputService:GetMouseLocation()
 				repeat
 					heldbutton = (inputService:GetMouseLocation() - holdpos).Magnitude < 3
 					task.wait()
-				until (tick() - holdtime) > 1 or not heldbutton or not clickgui.Visible
+				until (os.clock() - holdtime) > 1 or not heldbutton or not clickgui.Visible
 				if heldbutton and clickgui.Visible then
 					if mainapi.ThreadFix then
 						setthreadidentity(8)
@@ -3922,7 +3922,7 @@ function mainapi:CreateCategory(categorysettings)
 							if mainapi.ThreadFix then
 								setthreadidentity(8)
 							end
-							createMobileButton(moduleapi, inputType.Position + Vector3.new(0, guiService:GetGuiInset().Y, 0))
+							createMobileButton(moduleapi, inputType.Position + vector.create(0, guiService:GetGuiInset().Y, 0))
 							clickgui.Visible = true
 							mainapi:BlurCheck()
 							for _, mobileButton in mainapi.Modules do
@@ -4858,7 +4858,7 @@ function mainapi:CreateSearch()
 		if search.Text == '' then return end
 
 		for i, v in self.Modules do
-			if i:lower():find(search.Text:lower()) then
+			if string.find(string.lower(i), string.lower(search.Text)) then
 				local button = v.Object:Clone()
 				button.Bind:Destroy()
 				button.MouseButton1Click:Connect(function()
@@ -5482,7 +5482,7 @@ function mainapi:Remove(obj)
 		end
 
 		for _, v in {'Object', 'Children', 'Toggle', 'Button'} do
-			local childobj = typeof(newobj[v]) == 'table' and newobj[v].Object or newobj[v]
+			local childobj = type(newobj[v]) == 'table' and newobj[v].Object or newobj[v]
 			if typeof(childobj) == 'Instance' then
 				childobj:Destroy()
 				childobj:ClearAllChildren()
@@ -6576,12 +6576,12 @@ targetinfo = {
 		if not entitylib then return end
 
 		for i, v in self.Targets do
-			if v < tick() then
+			if v < os.clock() then
 				self.Targets[i] = nil
 			end
 		end
 
-		local v, highest = nil, tick()
+		local v, highest = nil, os.clock()
 		for i, check in self.Targets do
 			if check > highest then
 				v = i

@@ -55,11 +55,11 @@ local function loopClean(tbl)
 end
 
 local function waitForChildOfType(obj, name, timeout, prop)
-	local checktick = tick() + timeout
+	local checktick = os.clock() + timeout
 	local returned
 	repeat
 		returned = prop and obj[name] or obj:FindFirstChildOfClass(name)
-		if returned or checktick < tick() then break end
+		if returned or checktick < os.clock() then break end
 		task.wait()
 	until false
 	return returned
@@ -104,7 +104,7 @@ entitylib.Wallcheck = function(origin, position, ignoreobject)
 			end
 		end
 
-		if typeof(ignoreobject) == 'table' then
+		if type(ignoreobject) == 'table' then
 			for _, v in ignoreobject do
 				table.insert(ignorelist, v)
 			end
@@ -136,7 +136,7 @@ entitylib.EntityMouse = function(entitysettings)
 		end
 
 		table.sort(sortingTable, entitysettings.Sort or function(a, b)
-			return a.Magnitude < b.Magnitude
+			return vector.magnitude(a) < vector.magnitude(b)
 		end)
 
 		for _, v in sortingTable do
@@ -159,7 +159,7 @@ entitylib.EntityPosition = function(entitysettings)
 			if not entitysettings.Players and v.Player then continue end
 			if not entitysettings.NPCs and v.NPC then continue end
 			if not v.Targetable then continue end
-			local mag = (v[entitysettings.Part].Position - localPosition).Magnitude
+			local mag = vector.magnitude(v[entitysettings.Part].Position - localPosition)
 			if mag > entitysettings.Range then continue end
 			if entitylib.isVulnerable(v) then
 				table.insert(sortingTable, {
@@ -170,7 +170,7 @@ entitylib.EntityPosition = function(entitysettings)
 		end
 
 		table.sort(sortingTable, entitysettings.Sort or function(a, b)
-			return a.Magnitude < b.Magnitude
+			return vector.magnitude(a) < vector.magnitude(b)
 		end)
 
 		for _, v in sortingTable do
@@ -194,7 +194,7 @@ entitylib.AllPosition = function(entitysettings)
 			if not entitysettings.Players and v.Player then continue end
 			if not entitysettings.NPCs and v.NPC then continue end
 			if not v.Targetable then continue end
-			local mag = (v[entitysettings.Part].Position - localPosition).Magnitude
+			local mag = vector.magnitude(v[entitysettings.Part].Position - localPosition)
 			if mag > entitysettings.Range then continue end
 			if entitylib.isVulnerable(v) then
 				table.insert(sortingTable, {Entity = v, Magnitude = v.Target and -1 or mag})
@@ -202,7 +202,7 @@ entitylib.AllPosition = function(entitysettings)
 		end
 
 		table.sort(sortingTable, entitysettings.Sort or function(a, b)
-			return a.Magnitude < b.Magnitude
+			return vector.magnitude(a) < vector.magnitude(b)
 		end)
 
 		for _, v in sortingTable do

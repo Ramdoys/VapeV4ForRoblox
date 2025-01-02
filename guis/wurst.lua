@@ -72,7 +72,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/'..readfile('newvape/profiles/commit.txt')..'/'..select(1, path:gsub('newvape/', '')), true) end)
 		if not suc or res == '404: Not Found' then error(res) end
-		if path:find('.lua') then res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res end
+		if string.find(path, '.lua') then res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res end
 		writefile(path, res)
 	end
 	return (func or readfile)(path)
@@ -146,7 +146,7 @@ do
 	if res then
 		uipallet.Main = res.Main and Color3.fromRGB(unpack(res.Main)) or uipallet.Main
 		uipallet.Text = res.Text and Color3.fromRGB(unpack(res.Text)) or uipallet.Text
-		uipallet.Font = res.Font and Font.new(res.Font:find('rbxasset') and res.Font or string.format('rbxasset://fonts/families/%s.json', res.Font)) or uipallet.Font
+		uipallet.Font = res.Font and Font.new(string.find(res.Font, 'rbxasset') and res.Font or string.format('rbxasset://fonts/families/%s.json', res.Font)) or uipallet.Font
 		uipallet.FontSemiBold = Font.new(uipallet.Font.Family, Enum.FontWeight.SemiBold)
 	end
 	fontsize.Font = uipallet.Font
@@ -260,7 +260,7 @@ mainapi.Components = setmetatable(components, {
 
 task.spawn(function()
 	repeat
-		local hue = tick() * (0.2 * mainapi.RainbowSpeed.Value) % 1
+		local hue = os.clock() * (0.2 * mainapi.RainbowSpeed.Value) % 1
 		for _, v in mainapi.RainbowTable do
 			if v.Type == 'GUISlider' then
 				v:SetValue(mainapi:Color(hue))

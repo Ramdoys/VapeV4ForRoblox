@@ -11,7 +11,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/'..readfile('newvape/profiles/commit.txt')..'/'..select(1, path:gsub('newvape/', '')), true) end)
 		if not suc or res == '404: Not Found' then error(res) end
-		if path:find('.lua') then res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res end
+		if string.find(path, '.lua') thenres = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res end
 		writefile(path, res)
 	end
 	return (func or readfile)(path)
@@ -21,13 +21,9 @@ local cloneref = cloneref or function(obj) return obj end
 
 local playersService = cloneref(game:GetService('Players'))
 local replicatedStorage = cloneref(game:GetService('ReplicatedStorage'))
-local runService = cloneref(game:GetService('RunService'))
 local inputService = cloneref(game:GetService('UserInputService'))
-local textService = cloneref(game:GetService('TextService'))
-local tweenService = cloneref(game:GetService('TweenService'))
 local teamsService = cloneref(game:GetService('Teams'))
 local collectionService = cloneref(game:GetService('CollectionService'))
-local contextService = cloneref(game:GetService('ContextActionService'))
 
 local gameCamera = workspace.CurrentCamera
 local lplr = playersService.LocalPlayer
@@ -139,7 +135,6 @@ run(function()
 		else
 			return ent.Player.Team == teamsService.Police
 		end
-		return true
 	end
 end)
 entitylib.start()
@@ -227,7 +222,7 @@ run(function()
 		for i, v in debug.getupvalue(jb.TeamChooseController.Init, 2) do
 			if type(v) == 'function' then
 				for _, const in debug.getconstants(v) do
-					if tostring(const):find('PlusCash') then
+					if string.find(tostring(const), 'PlusCash') then
 						return v, i
 					end
 				end
@@ -403,12 +398,12 @@ run(function()
 	
 					if ent then
 						local item = jb.ItemSystemController:GetLocalEquipped()
-						if item and ((self.Tip.CFrame.Position - ent.RootPart.Position).Magnitude / (item.Config.BulletSpeed or 1000)) < item.BulletEmitter.LifeSpan then
+						if item and (vector.magnitude(self.Tip.CFrame.Position - ent.RootPart.Position) / (item.Config.BulletSpeed or 1000)) < item.BulletEmitter.LifeSpan then
 							ProjectileRaycast.FilterDescendantsInstances = {gameCamera, ent.Character}
 							ProjectileRaycast.CollisionGroup = ent.RootPart.CollisionGroup
-							local calc = prediction.SolveTrajectory(self.Tip.CFrame.Position, item.Config.BulletSpeed or 1000, math.abs(item.BulletEmitter.GravityVector.Y), ent.RootPart.Position, Instant.Enabled and Vector3.zero or ent.RootPart.Velocity, workspace.Gravity, ent.HipHeight, nil, ProjectileRaycast)
+							local calc = prediction.SolveTrajectory(self.Tip.CFrame.Position, item.Config.BulletSpeed or 1000, math.abs(item.BulletEmitter.GravityVector.Y), ent.RootPart.Position, Instant.Enabled and vector.zero or ent.RootPart.Velocity, workspace.Gravity, ent.HipHeight, nil, ProjectileRaycast)
 							if calc then
-								targetinfo.Targets[ent] = tick() + 1
+								targetinfo.Targets[ent] = os.clock() + 1
 								return calc
 							end
 						end
@@ -425,7 +420,7 @@ run(function()
 					if Instant.Enabled then 
 						local item = jb.ItemSystemController:GetLocalEquipped()
 						if item and item.BulletEmitter then
-							rawset(item.BulletEmitter, 'LastUpdate', tick() - (item.BulletEmitter.LifeSpan - 0.1))
+							rawset(item.BulletEmitter, 'LastUpdate', os.clock() - (item.BulletEmitter.LifeSpan - 0.1))
 						end
 					end
 					task.wait()
@@ -574,7 +569,7 @@ run(function()
 								local vehicle = ent.Humanoid.Sit and getVehicle(ent) or nil
 								if vehicle then
 									jb:FireServer('Eject', vehicle)
-								elseif not isArrested(ent.Player.Name) and (localPosition - ent.RootPart.Position).Magnitude < 18.4 then
+								elseif not isArrested(ent.Player.Name) and vector.magnitude(localPosition - ent.RootPart.Position) < 18.4 then
 									jb:FireServer('Arrest', ent.Player.Name)
 									task.wait(0.6)
 								end
@@ -620,7 +615,7 @@ run(function()
 		if entitylib.isAlive then
 			local localPosition = entitylib.character.HumanoidRootPart.Position
 			for _, car in collectionService:GetTagged('Vehicle') do
-				if car.PrimaryPart and (car.PrimaryPart.Position - localPosition).Magnitude <= Range.Value then
+				if car.PrimaryPart and vector.magnitude(car.PrimaryPart.Position - localPosition) <= Range.Value then
 					local entities = getEntitiesInVehicle(car)
 					local check = #entities > 0
 					if TeamCheck.Enabled then

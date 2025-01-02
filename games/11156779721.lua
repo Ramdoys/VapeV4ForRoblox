@@ -61,11 +61,11 @@ end
 
 run(function()
 	local function waitForChildOfType(obj, name, timeout, prop)
-		local checktick = tick() + timeout
+		local checktick = os.clock() + timeout
 		local returned
 		repeat
 			returned = prop and obj[name] or obj:FindFirstChildOfClass(name)
-			if returned or checktick < tick() then break end
+			if returned or checktick < os.clock() then break end
 			task.wait()
 		until false
 		return returned
@@ -98,7 +98,7 @@ run(function()
 				GetPropertyChangedSignal = function() end
 			}
 			local humrootpart = hum and waitForChildOfType(hum, 'RootPart', workspace.StreamingEnabled and 9e9 or 10, true)
-			local head = char:WaitForChild('Head', 10) or humrootpart and {Name = 'Head', Size = Vector3.one, Parent = char}
+			local head = char:WaitForChild('Head', 10) or humrootpart and {Name = 'Head', Size = vector.one, Parent = char}
 
 			if hum and humrootpart then
 				local entity = {
@@ -213,14 +213,14 @@ run(function()
 						})
 
 						if #plrs > 0 then
-							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+							local localfacing = entitylib.character.RootPart.CFrame.LookVector * vector.create(1, 0, 1)
 							block(false)
 							for i, v in plrs do
 								local delta = (v.RootPart.Position - entitylib.character.RootPart.Position)
-								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+								local angle = math.acos(vector.dot(localfacing, vector.normalize(delta * vector.create(1, 0, 1))))
 								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
 								table.insert(attacked, v)
-								targetinfo.Targets[v] = tick() + 1
+								targetinfo.Targets[v] = os.clock() + 1
 								Attacking = true
 
 								if v.NPC then
@@ -304,7 +304,7 @@ run(function()
 					local box = Instance.new('BoxHandleAdornment')
 					box.Adornee = nil
 					box.AlwaysOnTop = true
-					box.Size = Vector3.new(3, 5, 3)
+					box.Size = vector.create(3, 5, 3)
 					box.CFrame = CFrame.new(0, -0.5, 0)
 					box.ZIndex = 0
 					box.Parent = vape.gui
@@ -346,13 +346,13 @@ run(function()
 					end
 
 					for i, v in Particles do
-						v.Position = attacked[i] and attacked[i].RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
+						v.Position = attacked[i] and attacked[i].RootPart.Position or vector.create(9e9, 9e9, 9e9)
 						v.Parent = attacked[i] and gameCamera or nil
 					end
 				end
 				for i = 1, 10 do
 					local part = Instance.new('Part')
-					part.Size = Vector3.one
+					part.Size = vector.one
 					part.Anchored = true
 					part.CanCollide = false
 					part.Transparency = 1
@@ -523,7 +523,7 @@ run(function()
 	local Health
 	local eatRemote = replicatedStorage.remoteInterface.interactions.eat
 	local maxHunger = replicatedStorage.game.maxHunger.Value
-	local regenTick = tick()
+	local regenTick = os.clock()
 	
 	local function getEatenItem()
 		local inv, hunger = clientData.getInventory(lplr), clientData.getHunger()
@@ -540,9 +540,9 @@ run(function()
 					end
 	
 					if entitylib.character.Humanoid.Health < entitylib.character.Humanoid.MaxHealth and Health.Enabled then
-						if (v.instantHealth or v.durationHealth) and regenTick < tick() then
+						if (v.instantHealth or v.durationHealth) and regenTick < os.clock() then
 							if v.durationHealth then 
-								regenTick = tick() + (v.durationHealth / v.durationHealthRate) 
+								regenTick = os.clock() + (v.durationHealth / v.durationHealthRate) 
 							end
 							chosen = i
 							break
@@ -601,7 +601,7 @@ run(function()
 				repeat
 					if entitylib.isAlive then 
 						for i, v in pickuptable do 
-							if (v.Position - entitylib.character.RootPart.Position).Magnitude < 10 then 
+							if vector.magnitude(v.Position - entitylib.character.RootPart.Position) < 10 then 
 								firetouchinterest(v, entitylib.character.RootPart, 1)
 								firetouchinterest(v, entitylib.character.RootPart, 0)
 							end
@@ -642,7 +642,7 @@ run(function()
 		if not BreakerPart then
 			local percent = math.clamp(health / maxHealth, 0, 1)
 			local part = Instance.new('Part')
-			part.Size = Vector3.one
+			part.Size = vector.one
 			part.CFrame = block.PrimaryPart.CFrame
 			part.Transparency = 1
 			part.Anchored = true
@@ -651,7 +651,7 @@ run(function()
 			BreakerPart = part
 			local billboard = Instance.new('BillboardGui')
 			billboard.Size = UDim2.fromOffset(249, 102)
-			billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+			billboard.StudsOffset = vector.create(0, 2.5, 0)
 			billboard.Adornee = part
 			billboard.MaxDistance = 100
 			billboard.AlwaysOnTop = true
@@ -732,7 +732,7 @@ run(function()
 			local localPosition = entitylib.character.RootPart.Position
 	
 			for _, v in BreakerObjects do
-				if v:GetAttribute('health') > 0 and v.PrimaryPart and (localPosition - v.PrimaryPart.Position).Magnitude < 30 then
+				if v:GetAttribute('health') > 0 and v.PrimaryPart and vector.magnitude(localPosition - v.PrimaryPart.Position) < 30 then
 					local newhp = v:GetAttribute('health')
 					if newhp <= hp then closest, hp = v, newhp end
 				elseif v == old then

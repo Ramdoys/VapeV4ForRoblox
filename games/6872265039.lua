@@ -104,7 +104,7 @@ run(function()
 				repeat
 					if not bedwars.CrateAltarController.activeCrates[1] then
 						for _, v in bedwars.Store:getState().Consumable.inventory do
-							if v.consumable:find('crate') then
+							if string.find(v.consumable, 'crate') then
 								bedwars.CrateAltarController:pickCrate(v.consumable, 1)
 								task.wait(1.2)
 								if bedwars.CrateAltarController.activeCrates[1] and bedwars.CrateAltarController.activeCrates[1][2] then

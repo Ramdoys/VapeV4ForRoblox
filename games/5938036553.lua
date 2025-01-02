@@ -19,7 +19,7 @@ local function downloadFile(path, func)
 		if not suc or res == '404: Not Found' then 
 			error(res) 
 		end
-		if path:find('.lua') then 
+		if string.find(path, '.lua') then 
 			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res 
 		end
 		writefile(path, res)
@@ -231,7 +231,7 @@ run(function()
 			local plr = playersService:FindFirstChild(name)
 			if not plr then return end
 			for i, v in frontlines.Chat do
-				if v.TextLabel.TextTransparency > 0.5 and v.TextLabel.Text:find(name) then
+				if v.TextLabel.TextTransparency > 0.5 and string.find(v.TextLabel.Text, name) then
 					v.TextLabel.Text = whitelist:tag(plr, true, true)..v.TextLabel.Text
 					whitelist:process(text, plr)
 					break
@@ -290,7 +290,7 @@ run(function()
 
 			local hum = {
 				HipHeight = 2, 
-				MoveDirection = Vector3.zero, 
+				MoveDirection = vector.zero, 
 				Health = 100, 
 				MaxHealth = 100, 
 				GetState = function() 
@@ -309,11 +309,11 @@ run(function()
 			end
 
 			local humrootpart = char:WaitForChild('HumanoidRootPart', 10)
-			local head = humrootpart and setmetatable({Name = 'Head', Size = Vector3.one, Parent = char}, {__index = function(t, k)
+			local head = humrootpart and setmetatable({Name = 'Head', Size = vector.one, Parent = char}, {__index = function(t, k)
 				if k == 'Position' then
-					return humrootpart.Position + Vector3.new(0, 3, 0)
+					return humrootpart.Position + vector.create(0, 3, 0)
 				elseif k == 'CFrame' then
-					return humrootpart.CFrame + Vector3.new(0, 3, 0)
+					return humrootpart.CFrame + vector.create(0, 3, 0)
 				end
 			end})
 
@@ -394,7 +394,7 @@ run(function()
 					end
 	
 					if inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then 
-						local origin = entitylib.isAlive and frontlines.Main.globals.fpv_sol_instances.camera_bone.WorldPosition or Vector3.zero
+						local origin = entitylib.isAlive and frontlines.Main.globals.fpv_sol_instances.camera_bone.WorldPosition or vector.zero
 						local ent = entitylib.EntityMouse({
 							Range = FOV.Value,
 							Players = true,
@@ -410,12 +410,12 @@ run(function()
 								rayCheck.CollisionGroup = ent.RootPart.CollisionGroup
 								local velo = gun.fire_params.muzzle_velocity
 								local targetpos = ent.RootPart.Root_M.Spine1_M.Spine2_M.Chest_M.Neck_M.Head_M.WorldCFrame.Position
-								local calc = prediction.SolveTrajectory(origin, velo, workspace.Gravity, targetpos, Vector3.zero, workspace.Gravity, ent.HipHeight, nil, rayCheck)
+								local calc = prediction.SolveTrajectory(origin, velo, workspace.Gravity, targetpos, vector.zero, workspace.Gravity, ent.HipHeight, nil, rayCheck)
 								
 								if calc then 
 									local pos = gameCamera:WorldToViewportPoint(calc)
 									local localmouse = (inputService:GetMouseLocation() - Vector2.new(pos.X, pos.Y)) * dt * (Speed.Value / 10000)
-									targetinfo.Targets[ent] = tick() + 1
+									targetinfo.Targets[ent] = os.clock() + 1
 									frontlines.Main.exe_set(frontlines.Main.exe_set_t.CTRL_SOL_ATT_ROT, localmouse.Y, localmouse.X)
 								end
 							end
@@ -532,7 +532,7 @@ run(function()
 			NPCs = Target.NPCs.Enabled
 		})
 		if ent then 
-			targetinfo.Targets[ent] = tick() + 1 
+			targetinfo.Targets[ent] = os.clock() + 1 
 		end
 		return ent, ent and ent[targetPart]
 	end
@@ -551,12 +551,12 @@ run(function()
 					if cstate.state == frontlines.Main.cli_state_t.COMBAT and (shootid % frontlines.Main.globals.cli_id_alloc.m) == cstate.id then
 						local ent, targetPart = getTarget(pos)
 						if ent then
-							local velo = dir.Magnitude
+							local velo = vector.magnitude(dir)
 							local targetpos = targetPart.Root_M.Spine1_M.WorldCFrame.Position
 							local origin = gameCamera.CFrame.Position
 							ProjectileRaycast.FilterDescendantsInstances = {gameCamera, ent.Character}
 							ProjectileRaycast.CollisionGroup = targetPart.CollisionGroup
-							local calc = prediction.SolveTrajectory(pos, velo, workspace.Gravity, targetpos, Vector3.zero, workspace.Gravity, ent.HipHeight, nil, ProjectileRaycast)
+							local calc = prediction.SolveTrajectory(pos, velo, workspace.Gravity, targetpos, vector.zero, workspace.Gravity, ent.HipHeight, nil, ProjectileRaycast)
 							if calc then
 								dir = -CFrame.new(pos, calc).ZVector * velo
 							end
@@ -575,7 +575,7 @@ run(function()
 							Range = Range.Value,
 							Wallcheck = Target.Walls.Enabled or nil,
 							Part = 'RootPart',
-							Origin = entitylib.isAlive and frontlines.Main.globals.fpv_sol_instances.camera_bone.WorldPosition or Vector3.zero,
+							Origin = entitylib.isAlive and frontlines.Main.globals.fpv_sol_instances.camera_bone.WorldPosition or vector.zero,
 							Players = Target.Players.Enabled,
 							NPCs = Target.NPCs.Enabled
 						})
@@ -779,7 +779,7 @@ run(function()
 			if callback then
 				GunModifications:Clean(hookEvent('START_FPV_SOL_RECOIL_ANIM', function()
 					if Recoil.Enabled then
-						frontlines.Main.globals.fpv_sol_recoil.attitude_delta = Vector3.zero
+						frontlines.Main.globals.fpv_sol_recoil.attitude_delta = vector.zero
 						return true
 					end
 				end))
@@ -844,7 +844,7 @@ run(function()
 	local ParticleSize
 	local Boxes = {}
 	local Particles = {}
-	local hitdelay = tick()
+	local hitdelay = os.clock()
 	local didattack = false
 	
 	local function getAttackData()
@@ -882,18 +882,18 @@ run(function()
 	
 						if #plrs > 0 then
 							local gun = frontlines.Main.globals.fpv_sol_equipment.curr_equipment
-							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+							local localfacing = entitylib.character.RootPart.CFrame.LookVector * vector.create(1, 0, 1)
 	
 							for i, v in plrs do
 								local delta = (v.RootPart.Position - entitylib.character.RootPart.Position)
-								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+								local angle = math.acos(vector.dot(localfacing, vector.normalize(delta * vector.create(1, 0, 1))))
 								if angle > (math.rad(Angle.Value) / 2) then continue end
-								table.insert(attacked, {Entity = v, Check = delta.Magnitude > AttackRange.Value and BoxSwingColor or BoxAttackColor})
-								targetinfo.Targets[v] = tick() + 1
+								table.insert(attacked, {Entity = v, Check = vector.magnitude(delta) > AttackRange.Value and BoxSwingColor or BoxAttackColor})
+								targetinfo.Targets[v] = os.clock() + 1
 	
-								if delta.Magnitude > AttackRange.Value then continue end
+								if vector.magnitude(delta) > AttackRange.Value then continue end
 								didattack = knifecheck
-								if hitdelay < tick() then
+								if hitdelay < os.clock() then
 									local id, part
 									for i2, v2 in frontlines.Main.globals.soldier_hitbox_hash do
 										if i2.Weld.Part0 == v.RootPart then
@@ -903,12 +903,12 @@ run(function()
 									end
 	
 									if id then
-										hitdelay = tick() + 0.1
+										hitdelay = os.clock() + 0.1
 										frontlines.Main.utils.net_msg_util.c_prep_net_msg(frontlines.Main.globals.combat_net_msg_state, frontlines.Main.enums.c_net_msg.MELEE_HIT_SOL, id)
 										if knifecheck then
 											frontlines.Main.globals.ctrl_states.trigger = true
 											frontlines.Main.globals.ctrl_ts.trigger = time()
-											frontlines.Main.exe_set(frontlines.Main.exe_set_t.FPV_SOL_MELEE_SOL_HIT, gun, part, Vector3.zero)
+											frontlines.Main.exe_set(frontlines.Main.exe_set_t.FPV_SOL_MELEE_SOL_HIT, gun, part, vector.zero)
 											if vape.ThreadFix then 
 												setthreadidentity(8) 
 											end
@@ -932,7 +932,7 @@ run(function()
 					end
 	
 					for i, v in Particles do
-						v.Position = attacked[i] and attacked[i].Entity.RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
+						v.Position = attacked[i] and attacked[i].Entity.RootPart.Position or vector.create(9e9, 9e9, 9e9)
 						v.Parent = attacked[i] and gameCamera or nil
 					end
 	
@@ -992,7 +992,7 @@ run(function()
 					local box = Instance.new('BoxHandleAdornment')
 					box.Adornee = nil
 					box.AlwaysOnTop = true
-					box.Size = Vector3.new(3, 5, 3)
+					box.Size = vector.create(3, 5, 3)
 					box.CFrame = CFrame.new(0, -0.5, 0)
 					box.ZIndex = 0
 					box.Parent = vape.gui
@@ -1029,7 +1029,7 @@ run(function()
 			if callback then
 				for i = 1, 10 do
 					local part = Instance.new('Part')
-					part.Size = Vector3.one
+					part.Size = vector.one
 					part.Anchored = true
 					part.CanCollide = false
 					part.Transparency = 1
@@ -1149,7 +1149,7 @@ run(function()
 	local maxy = frontlines.Main.consts.fpv_sol_movement.MAX_ATT_X
 	local yaw, pitch = 0, 90
 	for i = 1, 40 do 
-		table.insert(aimtable, Vector3.zero) 
+		table.insert(aimtable, vector.zero) 
 	end
 	
 	SpinBot = vape.Categories.Blatant:CreateModule({
@@ -1169,7 +1169,7 @@ run(function()
 	
 				repeat
 					aimtable = table.clone(frontlines.Main.globals.sol_attitudes)
-					aimtable[frontlines.Main.globals.cli_state.fpv_sol_id] = Vector3.new(math.clamp(math.rad(pitch), -maxy, maxy), math.rad(yaw))
+					aimtable[frontlines.Main.globals.cli_state.fpv_sol_id] = vector.create(math.clamp(math.rad(pitch), -maxy, maxy), math.rad(yaw))
 					yaw += task.wait() * (Yaw.Value == 'Clockwise' and (Speed.Value or 0) or -(Speed.Value or 0)) * 1000
 				until not SpinBot.Enabled
 			else
@@ -1423,7 +1423,7 @@ run(function()
 							ind = 1 
 						end
 					end
-					frontlines.Main.utils.net_msg_util.c_prep_net_msg(frontlines.Main.globals.null_net_msg_state, frontlines.Main.enums.c_net_msg.CHAT, message:sub(1, 100))
+					frontlines.Main.utils.net_msg_util.c_prep_net_msg(frontlines.Main.globals.null_net_msg_state, frontlines.Main.enums.c_net_msg.CHAT, string.sub(message, 1, 100))
 					task.wait(1)
 				until not ChatSpammer.Enabled
 			end
@@ -1440,19 +1440,19 @@ end)
 run(function()
 	local PickupRange
 	local Range
-	local pickupdelay = tick()
+	local pickupdelay = os.clock()
 	
 	PickupRange = vape.Categories.Utility:CreateModule({
 		Name = 'PickupRange',
 		Function = function(callback)
 			if callback then 
 				repeat
-					if entitylib.isAlive and pickupdelay < tick() then
+					if entitylib.isAlive and pickupdelay < os.clock() then
 						for i, v in frontlines.Main.globals.equipment_drop_ids do 
 							local obj = frontlines.Main.globals.equipments[v]
-							if obj and (obj.model.PrimaryPart.Position - entitylib.character.RootPart.Position).Magnitude < Range.Value then 
+							if obj and vector.magnitude(obj.model.PrimaryPart.Position - entitylib.character.RootPart.Position) < Range.Value then 
 								if frontlines.Main.matrix_bit(frontlines.PickupBit, v) == 0 then 
-									pickupdelay = tick() + 0.1
+									pickupdelay = os.clock() + 0.1
 									frontlines.Main.set_matrix_bit(frontlines.PickupBit, v, true)
 									frontlines.Main.utils.net_msg_util.c_prep_net_msg(frontlines.Main.globals.combat_net_msg_state, frontlines.Main.enums.c_net_msg.PICKUP_AMMO, v)
 									break
@@ -1491,7 +1491,7 @@ run(function()
 					if DrawingToggle.Enabled then 
 						local obj = Drawing.new('Line')
 						obj.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
-						drawingobjs[obj] = {origin, origin + (velocity.Unit * 1000), tick()}
+						drawingobjs[obj] = {origin, origin + (vector.normalize(velocity) * 1000), os.clock()}
 						task.delay(Lifetime.Value, function()
 							drawingobjs[obj] = nil
 							obj.Visible = false
@@ -1499,8 +1499,8 @@ run(function()
 						end)
 					else
 						local obj = Instance.new('Part')
-						obj.Size = Vector3.new(0.05, 0.05, 1000)
-						obj.CFrame = CFrame.lookAt(origin + (velocity.Unit * 500), origin + (velocity.Unit * 1000))
+						obj.Size = vector.create(0.05, 0.05, 1000)
+						obj.CFrame = CFrame.lookAt(origin + (vector.normalize(velocity) * 500), origin + (vector.normalize(velocity) * 1000))
 						obj.CanCollide = false
 						obj.CanQuery = false
 						obj.Anchored = true
@@ -1531,7 +1531,7 @@ run(function()
 								obj.From = Vector2.new(from.X, from.Y)
 								obj.To = Vector2.new(to.X, to.Y)
 								if Fade.Enabled then 
-									obj.Transparency = Color.Opacity * (1 - math.clamp((tick() - data[3]) / Lifetime.Value, 0, 1))
+									obj.Transparency = Color.Opacity * (1 - math.clamp((os.clock() - data[3]) / Lifetime.Value, 0, 1))
 								end
 							else
 								obj.Visible = false

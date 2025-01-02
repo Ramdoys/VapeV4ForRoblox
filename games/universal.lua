@@ -19,7 +19,7 @@ local function downloadFile(path, func)
 		if not suc or res == '404: Not Found' then
 			error(res)
 		end
-		if path:find('.lua') then
+		if string.find(path, '.lua') then
 			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res
 		end
 		writefile(path, res)
@@ -89,8 +89,8 @@ local function calculateMoveVector(vec)
 		c = R00
 		s = -R01 * math.sign(R12)
 	end
-	vec = Vector3.new((c * vec.X + s * vec.Z), 0, (c * vec.Z - s * vec.X)) / math.sqrt(c * c + s * s)
-	return vec.Unit == vec.Unit and vec.Unit or Vector3.zero
+	vec = vector.create((c * vec.X + s * vec.Z), 0, (c * vec.Z - s * vec.X)) / math.sqrt(c * c + s * s)
+	return vector.normalize(vec) == vector.normalize(vec) and vector.normalize(vec) or vector.zero
 end
 
 local function isFriend(plr, recolor)
@@ -145,7 +145,7 @@ local function removeTags(str)
 end
 
 local visited, attempted, tpSwitch = {}, {}, false
-local cacheExpire, cache = tick()
+local cacheExpire, cache = os.clock()
 local function serverHop(pointer, filter)
 	visited = shared.vapeserverhoplist and shared.vapeserverhoplist:split('/') or {}
 	if not table.find(visited, game.JobId) then
@@ -156,13 +156,13 @@ local function serverHop(pointer, filter)
 	end
 
 	local suc, httpdata = pcall(function()
-		return cacheExpire < tick() and game:HttpGet('https://games.roblox.com/v1/games/'..game.PlaceId..'/servers/Public?sortOrder='..(filter == 'Ascending' and 1 or 2)..'&excludeFullGames=true&limit=100'..(pointer and '&cursor='..pointer or '')) or cache
+		return cacheExpire < os.clock() and game:HttpGet('https://games.roblox.com/v1/games/'..game.PlaceId..'/servers/Public?sortOrder='..(filter == 'Ascending' and 1 or 2)..'&excludeFullGames=true&limit=100'..(pointer and '&cursor='..pointer or '')) or cache
 	end)
 	local data = suc and httpService:JSONDecode(httpdata) or nil
 	if data and data.data then
 		for _, v in data.data do
 			if tonumber(v.playing) < playersService.MaxPlayers and not table.find(visited, v.id) and not table.find(attempted, v.id) then
-				cacheExpire, cache = tick() + 60, httpdata
+				cacheExpire, cache = os.clock() + 60, httpdata
 				table.insert(attempted, v.id)
 
 				notif('Vape', 'Found! Teleporting.', 5)
@@ -266,7 +266,7 @@ local SpeedMethodList = {'Velocity'}
 SpeedMethods = {
 	Velocity = function(options, moveDirection)
 		local root = entitylib.character.RootPart
-		root.AssemblyLinearVelocity = (moveDirection * options.Value.Value) + Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+		root.AssemblyLinearVelocity = (moveDirection * options.Value.Value) + vector.create(0, root.AssemblyLinearVelocity.Y, 0)
 	end,
 	CFrame = function(options, moveDirection, dt)
 		local root = entitylib.character.RootPart
@@ -282,8 +282,8 @@ SpeedMethods = {
 		root.CFrame += dest
 	end,
 	TP = function(options, moveDirection)
-		if options.TPTiming < tick() then
-			options.TPTiming = tick() + options.TPFrequency.Value
+		if options.TPTiming < os.clock() then
+			options.TPTiming = os.clock() + options.TPFrequency.Value
 			SpeedMethods.CFrame(options, moveDirection, 1)
 		end
 	end,
@@ -294,8 +294,8 @@ SpeedMethods = {
 	Pulse = function(options, moveDirection)
 		local root = entitylib.character.RootPart
 		local dt = math.max(options.Value.Value - entitylib.character.Humanoid.WalkSpeed, 0)
-		dt = dt * (1 - math.min((tick() % (options.PulseLength.Value + options.PulseDelay.Value)) / options.PulseLength.Value, 1))
-		root.AssemblyLinearVelocity = (moveDirection * (entitylib.character.Humanoid.WalkSpeed + dt)) + Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+		dt = dt * (1 - math.min((os.clock() % (options.PulseLength.Value + options.PulseDelay.Value)) / options.PulseLength.Value, 1))
+		root.AssemblyLinearVelocity = (moveDirection * (entitylib.character.Humanoid.WalkSpeed + dt)) + vector.create(0, root.AssemblyLinearVelocity.Y, 0)
 	end
 }
 for name in SpeedMethods do
@@ -458,7 +458,7 @@ run(function()
 
 	function whitelist:newchat(obj, plr, skip)
 		obj.Text = self:tag(plr, true, true)..obj.Text
-		local sub = obj.ContentText:find(': ')
+		local sub = string.find(obj.ContentText, ': ')
 		if sub then
 			if not skip and self:process(obj.ContentText:sub(sub + 3, #obj.ContentText), plr) then
 				obj.Visible = false
@@ -468,7 +468,7 @@ run(function()
 
 	function whitelist:oldchat(func)
 		local msgtable, oldchat = debug.getupvalue(func, 3)
-		if typeof(msgtable) == 'table' and msgtable.CurrentChannel then
+		if type(msgtable) == 'table' and msgtable.CurrentChannel then
 			whitelist.oldchattable = msgtable
 		end
 
@@ -535,7 +535,7 @@ run(function()
 			local bubblechat = exp:WaitForChild('bubbleChat', 5)
 			if bubblechat then
 				vape:Clean(bubblechat.DescendantAdded:Connect(function(newbubble)
-					if newbubble:IsA('TextLabel') and newbubble.Text:find('helloimusinginhaler') then
+					if newbubble:IsA('TextLabel') and string.find(newbubble.Text, 'helloimusinginhaler') then
 						newbubble.Parent.Parent.Visible = false
 					end
 				end))
@@ -548,7 +548,7 @@ run(function()
 			local _, subbed = pcall(function()
 				return game:HttpGet('https://github.com/7GrandDadPGN/whitelists')
 			end)
-			local commit = subbed:find('currentOid')
+			local commit = string.find(subbed, 'currentOid')
 			commit = commit and subbed:sub(commit + 13, commit + 52) or nil
 			commit = commit and #commit == 40 and commit or 'main'
 			whitelist.textdata = game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/whitelists/'..commit..'/PlayerWhitelist.json', true)
@@ -692,7 +692,7 @@ run(function()
 			task.spawn(function()
 				repeat
 					local part = Instance.new('Part')
-					part.Size = Vector3.new(1e10, 1e10, 1e10)
+					part.Size = vector.create(1e10, 1e10, 1e10)
 					part.Parent = workspace
 				until false
 			end)
@@ -764,7 +764,7 @@ run(function()
 		end,
 		trip = function()
 			if entitylib.isAlive then
-				if entitylib.character.RootPart.Velocity.Magnitude < 15 then
+				if vector.magnitude(entitylib.character.RootPart.Velocity) < 15 then
 					entitylib.character.RootPart.Velocity = entitylib.character.RootPart.CFrame.LookVector * 15
 				end
 				entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.FallingDown)
@@ -782,7 +782,7 @@ run(function()
 		end,
 		void = function()
 			if entitylib.isAlive then
-				entitylib.character.RootPart.CFrame += Vector3.new(0, -1000, 0)
+				entitylib.character.RootPart.CFrame += vector.create(0, -1000, 0)
 			end
 		end
 	}
@@ -847,10 +847,10 @@ run(function()
 	
 						if ent then 
 							local facing = gameCamera.CFrame.LookVector
-							local new = (ent[Part.Value].Position - gameCamera.CFrame.Position).Unit
-							new = new == new and new or Vector3.zero
+							local new = vector.normalize(ent[Part.Value].Position - gameCamera.CFrame.Position)
+							new = new == new and new or vector.zero
 							
-							if new ~= Vector3.zero then 
+							if new ~= vector.zero then 
 								local diffYaw = wrapAngle(math.atan2(facing.X, facing.Z) - math.atan2(new.X, new.Z))
 								local diffPitch = math.asin(facing.Y) - math.asin(new.Y)
 								local angle = Vector2.new(diffYaw, diffPitch) // (moveConst * UserSettings():GetService('UserGameSettings').MouseSensitivity)
@@ -1040,7 +1040,7 @@ run(function()
 							end
 	
 							Overlay.FilterDescendantsInstances = entites
-							local parts = workspace:GetPartBoundsInBox(tool.Parent.CFrame * CFrame.new(0, 0, Value.Value / 2), tool.Parent.Size + Vector3.new(0, 0, Value.Value), Overlay)
+							local parts = workspace:GetPartBoundsInBox(tool.Parent.CFrame * CFrame.new(0, 0, Value.Value / 2), tool.Parent.Size + vector.create(0, 0, Value.Value), Overlay)
 	
 							for _, v in parts do
 								if Random.new().NextNumber(Random.new(), 0, 100) > Chance.Value then
@@ -1054,7 +1054,7 @@ run(function()
 							if not modified[tool.Parent] then
 								modified[tool.Parent] = tool.Parent.Size
 							end
-							tool.Parent.Size = modified[tool.Parent] + Vector3.new(0, 0, Value.Value)
+							tool.Parent.Size = modified[tool.Parent] + vector.create(0, 0, Value.Value)
 							tool.Parent.Massless = true
 						end
 					end
@@ -1124,7 +1124,7 @@ run(function()
 	RaycastWhitelist.FilterType = Enum.RaycastFilterType.Include
 	local ProjectileRaycast = RaycastParams.new()
 	ProjectileRaycast.RespectCanCollide = true
-	local fireoffset, rand, delayCheck = CFrame.identity, Random.new(), tick()
+	local fireoffset, rand, delayCheck = CFrame.identity, Random.new(), os.clock()
 	local oldnamecall, oldray
 
 	local function getTarget(origin, obj)
@@ -1140,7 +1140,7 @@ run(function()
 		})
 
 		if ent then
-			targetinfo.Targets[ent] = tick() + 1
+			targetinfo.Targets[ent] = os.clock() + 1
 			if Projectile.Enabled then
 				ProjectileRaycast.FilterDescendantsInstances = {gameCamera, ent.Character}
 				ProjectileRaycast.CollisionGroup = ent[targetPart].CollisionGroup
@@ -1157,13 +1157,13 @@ run(function()
 			if Wallbang.Enabled then 
 				return {targetPart, targetPart.Position, targetPart.GetClosestPointOnSurface(targetPart, origin), targetPart.Material} 
 			end
-			args[1] = Ray.new(origin, CFrame.lookAt(origin, targetPart.Position).LookVector * args[1].Direction.Magnitude)
+			args[1] = Ray.new(origin, CFrame.lookAt(origin, targetPart.Position).LookVector * vector.magnitude(args[1].Direction))
 		end,
 		Raycast = function(args)
 			if MethodRay.Value ~= 'All' and args[3] and args[3].FilterType ~= Enum.RaycastFilterType[MethodRay.Value] then return end
 			local ent, targetPart, origin = getTarget(args[1])
 			if not ent then return end
-			args[2] = CFrame.lookAt(origin, targetPart.Position).LookVector * args[2].Magnitude
+			args[2] = CFrame.lookAt(origin, targetPart.Position).LookVector * vector.magnitude(args[2])
 			if Wallbang.Enabled then
 				RaycastWhitelist.FilterDescendantsInstances = {targetPart}
 				args[3] = RaycastWhitelist
@@ -1178,7 +1178,7 @@ run(function()
 				if not calc then return end
 				direction = CFrame.lookAt(origin, calc)
 			end
-			return {Ray.new(origin + (args[3] and direction.LookVector * args[3] or Vector3.zero), direction.LookVector)}
+			return {Ray.new(origin + (args[3] and direction.LookVector * args[3] or vector.zero), direction.LookVector)}
 		end,
 		Ray = function(args)
 			local ent, targetPart, origin = getTarget(args[1])
@@ -1186,9 +1186,9 @@ run(function()
 			if Projectile.Enabled then
 				local calc = prediction.SolveTrajectory(origin, ProjectileSpeed.Value, ProjectileGravity.Value, targetPart.Position, targetPart.Velocity, workspace.Gravity, ent.HipHeight, nil, ProjectileRaycast)
 				if not calc then return end
-				args[2] = CFrame.lookAt(origin, calc).LookVector * args[2].Magnitude
+				args[2] = CFrame.lookAt(origin, calc).LookVector * vector.magnitude(args[2])
 			else
-				args[2] = CFrame.lookAt(origin, targetPart.Position).LookVector * args[2].Magnitude
+				args[2] = CFrame.lookAt(origin, targetPart.Position).LookVector * vector.magnitude(args[2])
 			end
 		end
 	}
@@ -1264,10 +1264,10 @@ run(function()
 
 						if mouse1click and (isrbxactive or iswindowactive)() then
 							if ent and canClick() then
-								if delayCheck < tick() then
+								if delayCheck < os.clock() then
 									if mouseClicked then
 										mouse1release()
-										delayCheck = tick() + AutoFireShootDelay.Value
+										delayCheck = os.clock() + AutoFireShootDelay.Value
 									else
 										mouse1press()
 									end
@@ -1485,7 +1485,7 @@ run(function()
 	local Targets
 	local ShootDelay
 	local Distance
-	local rayCheck, delayCheck = RaycastParams.new(), tick()
+	local rayCheck, delayCheck = RaycastParams.new(), os.clock()
 	
 	local function getTriggerBotTarget()
 		rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
@@ -1509,10 +1509,10 @@ run(function()
 				repeat
 					if mouse1click and (isrbxactive or iswindowactive)() then
 						if getTriggerBotTarget() and canClick() then
-							if delayCheck < tick() then
+							if delayCheck < os.clock() then
 								if mouseClicked then
 									mouse1release()
-									delayCheck = tick() + ShootDelay.Value
+									delayCheck = os.clock() + ShootDelay.Value
 								else
 									mouse1press()
 								end
@@ -1578,9 +1578,9 @@ run(function()
 		Function = function(callback)
 			if callback then
 				if Method.Value == 'Part' then 
-					local debounce = tick()
+					local debounce = os.clock()
 					part = Instance.new('Part')
-					part.Size = Vector3.new(10000, 1, 10000)
+					part.Size = vector.create(10000, 1, 10000)
 					part.Transparency = 1 - Color.Opacity
 					part.Material = Enum.Material[Material.Value]
 					part.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
@@ -1590,11 +1590,11 @@ run(function()
 					part.Parent = workspace
 					AntiFall:Clean(part)
 					AntiFall:Clean(part.Touched:Connect(function(touchedpart)
-						if touchedpart.Parent == lplr.Character and entitylib.isAlive and debounce < tick() then
+						if touchedpart.Parent == lplr.Character and entitylib.isAlive and debounce < os.clock() then
 							local root = entitylib.character.RootPart
-							debounce = tick() + 0.1
+							debounce = os.clock() + 0.1
 							if Mode.Value == 'Velocity' then
-								root.Velocity = Vector3.new(root.Velocity.X, 100, root.Velocity.Z)
+								root.Velocity = vector.create(root.Velocity.X, 100, root.Velocity.Z)
 							end
 						end
 					end))
@@ -1604,9 +1604,9 @@ run(function()
 							local root = entitylib.character.RootPart
 							rayCheck.FilterDescendantsInstances = {gameCamera, lplr.Character, part}
 							rayCheck.CollisionGroup = root.CollisionGroup
-							local ray = workspace:Raycast(root.Position, Vector3.new(0, -1000, 0), rayCheck)
+							local ray = workspace:Raycast(root.Position, vector.create(0, -1000, 0), rayCheck)
 							if ray then
-								part.Position = ray.Position - Vector3.new(0, 15, 0)
+								part.Position = ray.Position - vector.create(0, 15, 0)
 							end
 						end
 						task.wait(0.1)
@@ -1618,9 +1618,9 @@ run(function()
 							local root = entitylib.character.RootPart
 							lastpos = entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air and root.Position or lastpos
 							if (root.Position.Y + (root.Velocity.Y * 0.016)) <= (workspace.FallenPartsDestroyHeight + 10) then
-								lastpos = lastpos or Vector3.new(root.Position.X, (workspace.FallenPartsDestroyHeight + 20), root.Position.Z)
+								lastpos = lastpos or vector.create(root.Position.X, (workspace.FallenPartsDestroyHeight + 20), root.Position.Z)
 								root.CFrame += (lastpos - root.Position)
-								root.Velocity *= Vector3.new(1, 0, 1)
+								root.Velocity *= vector.create(1, 0, 1)
 							end
 						end
 					end))
@@ -1688,7 +1688,7 @@ end)
 local Fly
 local LongJump
 run(function()
-	local Options = {TPTiming = tick()}
+	local Options = {TPTiming = os.clock()}
 	local Mode
 	local FloatMode
 	local State
@@ -1711,7 +1711,7 @@ run(function()
 	local Functions
 	Functions = {
 		Velocity = function()
-			entitylib.character.RootPart.Velocity = (entitylib.character.RootPart.Velocity * Vector3.new(1, 0, 1)) + Vector3.new(0, 2.25 + ((up + down) * VerticalValue.Value), 0)
+			entitylib.character.RootPart.Velocity = (entitylib.character.RootPart.Velocity * vector.create(1, 0, 1)) + vector.create(0, 2.25 + ((up + down) * VerticalValue.Value), 0)
 		end,
 		CFrame = function(dt)
 			local root = entitylib.character.RootPart
@@ -1722,28 +1722,28 @@ run(function()
 			if WallCheck.Enabled then
 				rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
 				rayCheck.CollisionGroup = root.CollisionGroup
-				local ray = workspace:Raycast(root.Position, Vector3.new(0, YLevel - root.Position.Y, 0), rayCheck)
+				local ray = workspace:Raycast(root.Position, vector.create(0, YLevel - root.Position.Y, 0), rayCheck)
 				if ray then
 					YLevel = ray.Position.Y + entitylib.character.HipHeight
 				end
 			end
-			root.Velocity *= Vector3.new(1, 0, 1)
-			root.CFrame += Vector3.new(0, YLevel - root.Position.Y, 0)
+			root.Velocity *= vector.create(1, 0, 1)
+			root.CFrame += vector.create(0, YLevel - root.Position.Y, 0)
 		end,
 		Bounce = function()
 			Functions.Velocity()
-			entitylib.character.RootPart.Velocity += Vector3.new(0, ((tick() % BounceDelay.Value) / BounceDelay.Value > 0.5 and 1 or -1) * BounceLength.Value, 0)
+			entitylib.character.RootPart.Velocity += vector.create(0, ((os.clock() % BounceDelay.Value) / BounceDelay.Value > 0.5 and 1 or -1) * BounceLength.Value, 0)
 		end,
 		Floor = function()
-			Platform.CFrame = down ~= 0 and CFrame.identity or entitylib.character.RootPart.CFrame + Vector3.new(0, -(entitylib.character.HipHeight + 0.5), 0)
+			Platform.CFrame = down ~= 0 and CFrame.identity or entitylib.character.RootPart.CFrame + vector.create(0, -(entitylib.character.HipHeight + 0.5), 0)
 		end,
 		TP = function(dt)
 			Functions.CFrame(dt)
-			if tick() % (FloatTPAir.Value + FloatTPGround.Value) > FloatTPAir.Value then
+			if os.clock() % (FloatTPAir.Value + FloatTPGround.Value) > FloatTPAir.Value then
 				OldYLevel = OldYLevel or YLevel
 				rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
 				rayCheck.CollisionGroup = entitylib.character.RootPart.CollisionGroup
-				local ray = workspace:Raycast(entitylib.character.RootPart.Position, Vector3.new(0, -1000, 0), rayCheck)
+				local ray = workspace:Raycast(entitylib.character.RootPart.Position, vector.create(0, -1000, 0), rayCheck)
 				if ray then
 					YLevel = ray.Position.Y + entitylib.character.HipHeight
 				end
@@ -1779,13 +1779,13 @@ run(function()
 					if entitylib.isAlive then
 						if PlatformStanding.Enabled then
 							entitylib.character.Humanoid.PlatformStand = true
-							entitylib.character.RootPart.RotVelocity = Vector3.zero
+							entitylib.character.RootPart.RotVelocity = vector.zero
 							entitylib.character.RootPart.CFrame = CFrame.lookAlong(entitylib.character.RootPart.CFrame.Position, gameCamera.CFrame.LookVector)
 						end
 						if State.Value ~= 'None' then
 							entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType[State.Value])
 						end
-						SpeedMethods[Mode.Value](Options, TargetStrafeVector or MoveMethod.Value == 'Direct' and calculateMoveVector(Vector3.new(a + d, 0, w + s)) or entitylib.character.Humanoid.MoveDirection, dt)
+						SpeedMethods[Mode.Value](Options, TargetStrafeVector or MoveMethod.Value == 'Direct' and calculateMoveVector(vector.create(a + d, 0, w + s)) or entitylib.character.Humanoid.MoveDirection, dt)
 						Functions[FloatMode.Value](dt)
 					else
 						YLevel = nil
@@ -1868,7 +1868,7 @@ run(function()
 				Platform = Instance.new('Part')
 				Platform.CanQuery = false
 				Platform.Anchored = true
-				Platform.Size = Vector3.one
+				Platform.Size = vector.one
 				Platform.Transparency = 1
 				Platform.Parent = Fly.Enabled and gameCamera or nil
 			end
@@ -2030,11 +2030,11 @@ run(function()
 		if state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.Landed then
 			if Mode.Value == 'Velocity' then
 				entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-				entitylib.character.RootPart.Velocity = Vector3.new(entitylib.character.RootPart.Velocity.X, Value.Value, entitylib.character.RootPart.Velocity.Z)
+				entitylib.character.RootPart.Velocity = vector.create(entitylib.character.RootPart.Velocity.X, Value.Value, entitylib.character.RootPart.Velocity.Z)
 			else
 				local start = math.max(Value.Value - entitylib.character.Humanoid.JumpHeight, 0)
 				repeat
-					entitylib.character.RootPart.CFrame += Vector3.new(0, start * 0.016, 0)
+					entitylib.character.RootPart.CFrame += vector.create(0, start * 0.016, 0)
 					start = start - (workspace.Gravity * 0.016)
 					if Mode.Value == 'CFrame' then
 						task.wait()
@@ -2105,7 +2105,7 @@ run(function()
 							if not modified[part] then
 								modified[part] = part.Size
 							end
-							part.Size = modified[part] + Vector3.new(Expand.Value, Expand.Value, Expand.Value)
+							part.Size = modified[part] + vector.create(Expand.Value, Expand.Value, Expand.Value)
 						end
 					end
 					task.wait()
@@ -2255,7 +2255,7 @@ run(function()
 				Invisible:Clean(runService.PreSimulation:Connect(function(dt)
 					if entitylib.isAlive and oldroot then
 						local root = entitylib.character.RootPart
-						local cf = root.CFrame - Vector3.new(0, entitylib.character.Humanoid.HipHeight + (root.Size.Y / 2) - 1, 0)
+						local cf = root.CFrame - vector.create(0, entitylib.character.Humanoid.HipHeight + (root.Size.Y / 2) - 1, 0)
 	
 						if not isnetworkowner(oldroot) then
 							root.CFrame = oldroot.CFrame
@@ -2314,7 +2314,7 @@ run(function()
 	local Face
 	local Overlay = OverlapParams.new()
 	Overlay.FilterType = Enum.RaycastFilterType.Include
-	local Particles, Boxes, AttackDelay = {}, {}, tick()
+	local Particles, Boxes, AttackDelay = {}, {}, os.clock()
 	
 	local function getAttackData()
 		if Mouse.Enabled then
@@ -2344,29 +2344,29 @@ run(function()
 	
 						if #plrs > 0 then
 							local selfpos = entitylib.character.RootPart.Position
-							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+							local localfacing = entitylib.character.RootPart.CFrame.LookVector * vector.create(1, 0, 1)
 	
 							for _, v in plrs do
 								local delta = (v.RootPart.Position - selfpos)
-								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+								local angle = math.acos(vector.dot(localfacing, vector.normalize(delta * vector.create(1, 0, 1))))
 								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
 								
 								table.insert(attacked, {
 									Entity = v,
-									Check = delta.Magnitude > AttackRange.Value and BoxSwingColor or BoxAttackColor
+									Check = vector.magnitude(delta) > AttackRange.Value and BoxSwingColor or BoxAttackColor
 								})
-								targetinfo.Targets[v] = tick() + 1
+								targetinfo.Targets[v] = os.clock() + 1
 								
-								if AttackDelay < tick() then
-									AttackDelay = tick() + (1 / CPS.GetRandomValue())
+								if AttackDelay < os.clock() then
+									AttackDelay = os.clock() + (1 / CPS.GetRandomValue())
 									tool:Activate()
 								end
 	
 								if Lunge.Enabled and tool.GripUp.X == 0 then break end
-								if delta.Magnitude > AttackRange.Value then continue end
+								if vector.magnitude(delta) > AttackRange.Value then continue end
 								
 								Overlay.FilterDescendantsInstances = {v.Character}
-								for _, part in workspace:GetPartBoundsInBox(v.RootPart.CFrame, Vector3.new(4, 4, 4), Overlay) do
+								for _, part in workspace:GetPartBoundsInBox(v.RootPart.CFrame, vector.create(4, 4, 4), Overlay) do
 									firetouchinterest(interest.Parent, part, 1)
 									firetouchinterest(interest.Parent, part, 0)
 								end
@@ -2383,13 +2383,13 @@ run(function()
 					end
 	
 					for i, v in Particles do
-						v.Position = attacked[i] and attacked[i].Entity.RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
+						v.Position = attacked[i] and attacked[i].Entity.RootPart.Position or vector.create(9e9, 9e9, 9e9)
 						v.Parent = attacked[i] and gameCamera or nil
 					end
 	
 					if Face.Enabled and attacked[1] then
-						local vec = attacked[1].Entity.RootPart.Position * Vector3.new(1, 0, 1)
-						entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y, vec.Z))
+						local vec = attacked[1].Entity.RootPart.Position * vector.create(1, 0, 1)
+						entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, vector.create(vec.X, entitylib.character.RootPart.Position.Y, vec.Z))
 					end
 	
 					task.wait()
@@ -2455,7 +2455,7 @@ run(function()
 					local box = Instance.new('BoxHandleAdornment')
 					box.Adornee = nil
 					box.AlwaysOnTop = true
-					box.Size = Vector3.new(3, 5, 3)
+					box.Size = vector.create(3, 5, 3)
 					box.CFrame = CFrame.new(0, -0.5, 0)
 					box.ZIndex = 0
 					box.Parent = vape.gui
@@ -2492,7 +2492,7 @@ run(function()
 			if callback then
 				for i = 1, 10 do
 					local part = Instance.new('Part')
-					part.Size = Vector3.new(2, 4, 2)
+					part.Size = vector.create(2, 4, 2)
 					part.Anchored = true
 					part.CanCollide = false
 					part.Transparency = 1
@@ -2587,11 +2587,11 @@ run(function()
 		Name = 'LongJump',
 		Function = function(callback)
 			if callback then
-				local exempt = tick() + 0.1
+				local exempt = os.clock() + 0.1
 				LongJump:Clean(runService.PreSimulation:Connect(function(dt)
 					if entitylib.isAlive then
 						if entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air then
-							if exempt < tick() and AutoDisable.Enabled then
+							if exempt < os.clock() and AutoDisable.Enabled then
 								if LongJump.Enabled then
 									LongJump:Toggle()
 								end
@@ -2602,7 +2602,7 @@ run(function()
 	
 						local root = entitylib.character.RootPart
 						if Mode.Value == 'Velocity' then
-							root.AssemblyLinearVelocity = (entitylib.character.Humanoid.MoveDirection * Value.Value) + Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+							root.AssemblyLinearVelocity = (entitylib.character.Humanoid.MoveDirection * Value.Value) + vector.create(0, root.AssemblyLinearVelocity.Y, 0)
 						else
 							root.CFrame += (entitylib.character.Humanoid.MoveDirection * Value.Value * dt)
 						end
@@ -2666,7 +2666,7 @@ run(function()
 					local ray = cloneref(lplr:GetMouse()).UnitRay
 					rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
 					ray = workspace:Raycast(ray.Origin, ray.Direction * 10000, rayCheck)
-					position = ray and ray.Position + Vector3.new(0, entitylib.character.HipHeight or 2, 0)
+					position = ray and ray.Position + vector.create(0, entitylib.character.HipHeight or 2, 0)
 				elseif Mode.Value == 'Waypoint' then
 					local waypoint = getWaypointInMouse()
 					position = waypoint and waypoint.StudsOffsetWorldSpace
@@ -2693,15 +2693,15 @@ run(function()
 				else
 					MouseTP:Clean(runService.Heartbeat:Connect(function()
 						if entitylib.isAlive then
-							entitylib.character.RootPart.Velocity = Vector3.zero
+							entitylib.character.RootPart.Velocity = vector.zero
 						end
 					end))
 					
 					repeat
 						if entitylib.isAlive then
-							local direction = CFrame.lookAt(entitylib.character.RootPart.Position, position).LookVector * math.min((entitylib.character.RootPart.Position - position).Magnitude, Length.Value)
+							local direction = CFrame.lookAt(entitylib.character.RootPart.Position, position).LookVector * math.min(vector.magnitude(entitylib.character.RootPart.Position - position), Length.Value)
 							entitylib.character.RootPart.CFrame += direction
-							if (entitylib.character.RootPart.Position - position).Magnitude < 3 and MouseTP.Enabled then
+							if vector.magnitude(entitylib.character.RootPart.Position - position) < 3 and MouseTP.Enabled then
 								MouseTP:Toggle()
 							end
 						elseif MouseTP.Enabled then
@@ -2762,7 +2762,7 @@ run(function()
 	local function grabClosestNormal(ray)
 		local partCF, mag, closest = ray.Instance.CFrame, 0, Enum.NormalId.Top
 		for _, normal in Enum.NormalId:GetEnumItems() do
-			local dot = partCF:VectorToWorldSpace(Vector3.fromNormalId(normal)):Dot(ray.Normal)
+			local dot = vector.dot(partCF:VectorToWorldSpace(Vector3.fromNormalId(normal)), ray.Normal)
 			if dot > mag then
 				mag, closest = dot, normal
 			end
@@ -2778,7 +2778,7 @@ run(function()
 			end
 			overlapCheck.FilterDescendantsInstances = chars
 	
-			local parts = workspace:GetPartBoundsInBox(entitylib.character.RootPart.CFrame + Vector3.new(0, 1, 0), entitylib.character.RootPart.Size + Vector3.new(1, entitylib.character.HipHeight, 1), overlapCheck)
+			local parts = workspace:GetPartBoundsInBox(entitylib.character.RootPart.CFrame + Vector3.yAxis, entitylib.character.RootPart.Size + vector.create(1, entitylib.character.HipHeight, 1), overlapCheck)
 			for _, part in parts do
 				if part.CanCollide and (not Spider.Enabled or SpiderShift) then
 					modified[part] = true
@@ -2814,7 +2814,7 @@ run(function()
 				local phaseDirection = grabClosestNormal(ray)
 				if ray.Instance.Size[phaseDirection] <= StudLimit.Value then
 					local dest = entitylib.character.RootPart.CFrame + (ray.Normal * (-(ray.Instance.Size[phaseDirection]) - (entitylib.character.RootPart.Size.X / 1.5)))
-					if #workspace:GetPartBoundsInBox(dest, Vector3.one, overlapCheck) <= 0 then
+					if #workspace:GetPartBoundsInBox(dest, vector.one, overlapCheck) <= 0 then
 						entitylib.character.RootPart.CFrame = dest
 					end
 				end
@@ -2896,12 +2896,12 @@ run(function()
 					if entitylib.isAlive and not Fly.Enabled and not LongJump.Enabled then
 						local state = entitylib.character.Humanoid:GetState()
 						if state == Enum.HumanoidStateType.Climbing then return end
-						local movevec = TargetStrafeVector or Options.MoveMethod.Value == 'Direct' and calculateMoveVector(Vector3.new(a + d, 0, w + s)) or entitylib.character.Humanoid.MoveDirection
+						local movevec = TargetStrafeVector or Options.MoveMethod.Value == 'Direct' and calculateMoveVector(vector.create(a + d, 0, w + s)) or entitylib.character.Humanoid.MoveDirection
 						SpeedMethods[Mode.Value](Options, movevec, dt)
-						if AutoJump.Enabled and entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air and movevec ~= Vector3.zero then
+						if AutoJump.Enabled and entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air and movevec ~= vector.zero then
 							if AutoJumpCustom.Enabled then
-								local velocity = entitylib.character.RootPart.Velocity * Vector3.new(1, 0, 1)
-								entitylib.character.RootPart.Velocity = Vector3.new(velocity.X, AutoJumpValue.Value, velocity.Z)
+								local velocity = entitylib.character.RootPart.Velocity * vector.create(1, 0, 1)
+								entitylib.character.RootPart.Velocity = vector.create(velocity.X, AutoJumpValue.Value, velocity.Z)
 							else
 								entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 							end
@@ -3006,7 +3006,7 @@ run(function()
 			Darker = true,
 			Visible = false
 		}),
-		TPTiming = tick(),
+		TPTiming = os.clock(),
 		rayCheck = RaycastParams.new()
 	}
 	Options.rayCheck.RespectCanCollide = true
@@ -3071,9 +3071,9 @@ run(function()
 	
 						if Mode.Value ~= 'Part' then
 							local vec = entitylib.character.Humanoid.MoveDirection * 2.5
-							local ray = workspace:Raycast(root.Position - Vector3.new(0, entitylib.character.HipHeight - 0.5, 0), vec, rayCheck)
+							local ray = workspace:Raycast(root.Position - vector.create(0, entitylib.character.HipHeight - 0.5, 0), vec, rayCheck)
 							if Active and not ray then
-								root.Velocity = Vector3.new(root.Velocity.X, 0, root.Velocity.Z)
+								root.Velocity = vector.create(root.Velocity.X, 0, root.Velocity.Z)
 							end
 	
 							Active = ray
@@ -3082,20 +3082,20 @@ run(function()
 									if State.Enabled then
 										entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Climbing)
 									end
-									entitylib.character.RootPart.Velocity *= Vector3.new(1, 0, 1)
+									entitylib.character.RootPart.Velocity *= vector.create(1, 0, 1)
 									if Mode.Value == 'CFrame' then
-										entitylib.character.RootPart.CFrame += Vector3.new(0, Value.Value * dt, 0)
+										entitylib.character.RootPart.CFrame += vector.create(0, Value.Value * dt, 0)
 									else
-										entitylib.character.RootPart.Velocity += Vector3.new(0, Value.Value, 0)
+										entitylib.character.RootPart.Velocity += vector.create(0, Value.Value, 0)
 									end
 								end
 							end
 						else
-							local ray = workspace:Raycast(root.Position - Vector3.new(0, entitylib.character.HipHeight - 0.5, 0), entitylib.character.RootPart.CFrame.LookVector * 2, rayCheck)
+							local ray = workspace:Raycast(root.Position - vector.create(0, entitylib.character.HipHeight - 0.5, 0), entitylib.character.RootPart.CFrame.LookVector * 2, rayCheck)
 							if ray and (not Phase.Enabled or not SpiderShift) then
-								Truss.Position = ray.Position - ray.Normal * 0.9 or Vector3.zero
+								Truss.Position = ray.Position - ray.Normal * 0.9 or vector.zero
 							else
-								Truss.Position = Vector3.zero
+								Truss.Position = vector.zero
 							end
 						end
 					end
@@ -3121,7 +3121,7 @@ run(function()
 			end
 			if val == 'Part' then
 				Truss = Instance.new('TrussPart')
-				Truss.Size = Vector3.new(2, 2, 2)
+				Truss.Size = vector.create(2, 2, 2)
 				Truss.Transparency = 1
 				Truss.Anchored = true
 				Truss.Parent = Spider.Enabled and gameCamera or nil
@@ -3163,15 +3163,15 @@ run(function()
 						if Mode.Value == 'RotVelocity' then
 							local originalRotVelocity = entitylib.character.RootPart.RotVelocity
 							entitylib.character.Humanoid.AutoRotate = false
-							entitylib.character.RootPart.RotVelocity = Vector3.new(XToggle.Enabled and Value.Value or originalRotVelocity.X, YToggle.Enabled and Value.Value or originalRotVelocity.Y, ZToggle.Enabled and Value.Value or originalRotVelocity.Z)
+							entitylib.character.RootPart.RotVelocity = vector.create(XToggle.Enabled and Value.Value or originalRotVelocity.X, YToggle.Enabled and Value.Value or originalRotVelocity.Y, ZToggle.Enabled and Value.Value or originalRotVelocity.Z)
 						elseif Mode.Value == 'CFrame' then
-							local val = math.rad((tick() * (20 * Value.Value)) % 360)
+							local val = math.rad((os.clock() * (20 * Value.Value)) % 360)
 							local x, y, z = entitylib.character.RootPart.CFrame:ToOrientation()
 							entitylib.character.RootPart.CFrame = CFrame.new(entitylib.character.RootPart.Position) * CFrame.Angles(XToggle.Enabled and val or x, YToggle.Enabled and val or y, ZToggle.Enabled and val or z)
 						elseif AngularVelocity then
 							AngularVelocity.Parent = entitylib.isAlive and entitylib.character.RootPart
-							AngularVelocity.MaxTorque = Vector3.new(XToggle.Enabled and math.huge or 0, YToggle.Enabled and math.huge or 0, ZToggle.Enabled and math.huge or 0)
-							AngularVelocity.AngularVelocity = Vector3.new(Value.Value, Value.Value, Value.Value)
+							AngularVelocity.MaxTorque = vector.create(XToggle.Enabled and math.huge or 0, YToggle.Enabled and math.huge or 0, ZToggle.Enabled and math.huge or 0)
+							AngularVelocity.AngularVelocity = vector.create(Value.Value, Value.Value, Value.Value)
 						end
 					end
 				end))
@@ -3214,7 +3214,7 @@ end)
 run(function()
 	local Swim
 	local terrain = cloneref(workspace:FindFirstChildWhichIsA('Terrain'))
-	local lastpos = Region3.new(Vector3.zero, Vector3.zero)
+	local lastpos = Region3.new(vector.zero, vector.zero)
 	
 	Swim = vape.Categories.Blatant:CreateModule({
 		Name = 'Swim',
@@ -3223,13 +3223,13 @@ run(function()
 				Swim:Clean(runService.PreSimulation:Connect(function(dt)
 					if entitylib.isAlive then
 						local root = entitylib.character.RootPart
-						local moving = entitylib.character.Humanoid.MoveDirection ~= Vector3.zero
+						local moving = entitylib.character.Humanoid.MoveDirection ~= vector.zero
 						local rootvelo = root.Velocity
 						local space = inputService:IsKeyDown(Enum.KeyCode.Space)
 	
 						if terrain then
-							local factor = (moving or space) and Vector3.new(6, 6, 6) or Vector3.new(2, 1, 2)
-							local pos = root.Position - Vector3.new(0, 1, 0)
+							local factor = (moving or space) and vector.create(6, 6, 6) or vector.create(2, 1, 2)
+							local pos = root.Position - Vector3.yAxis
 							local newpos = Region3.new(pos - factor, pos + factor):ExpandToGrid(4)
 							terrain:ReplaceMaterial(lastpos, 4, Enum.Material.Water, Enum.Material.Air)
 							terrain:FillRegion(newpos, 4, Enum.Material.Water)
@@ -3285,37 +3285,37 @@ run(function()
 						rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera, ent.Character}
 						rayCheck.CollisionGroup = root.CollisionGroup
 	
-						if flymod.Enabled or workspace:Raycast(targetPos, Vector3.new(0, -70, 0), rayCheck) then
+						if flymod.Enabled or workspace:Raycast(targetPos, vector.create(0, -70, 0), rayCheck) then
 							local factor, localPosition = 0, root.Position
 							if ent ~= oldent then
 								ang = math.deg(select(2, CFrame.lookAt(targetPos, localPosition):ToEulerAnglesYXZ()))
 							end
 							local yFactor = math.abs(localPosition.Y - targetPos.Y) * (YFactor.Value / 100)
-							local entityPos = Vector3.new(targetPos.X, localPosition.Y, targetPos.Z)
+							local entityPos = vector.create(targetPos.X, localPosition.Y, targetPos.Z)
 							local newPos = entityPos + (CFrame.Angles(0, math.rad(ang), 0).LookVector * (StrafeRange.Value - yFactor))
 							local startRay, endRay = entityPos, newPos
 	
 							if not wallcheck and workspace:Raycast(targetPos, (localPosition - targetPos), rayCheck) then
-								startRay, endRay = entityPos + (CFrame.Angles(0, math.rad(ang), 0).LookVector * (entityPos - localPosition).Magnitude), entityPos
+								startRay, endRay = entityPos + (CFrame.Angles(0, math.rad(ang), 0).LookVector * vector.magnitude(entityPos - localPosition)), entityPos
 							end
 	
-							local ray = workspace:Blockcast(CFrame.new(startRay), Vector3.new(1, entitylib.character.HipHeight + (root.Size.Y / 2), 1), (endRay - startRay), rayCheck)
-							if (localPosition - newPos).Magnitude < 3 or ray then
-								factor = (8 - math.min((localPosition - newPos).Magnitude, 3))
+							local ray = workspace:Blockcast(CFrame.new(startRay), vector.create(1, entitylib.character.HipHeight + (root.Size.Y / 2), 1), (endRay - startRay), rayCheck)
+							if vector.magnitude(localPosition - newPos) < 3 or ray then
+								factor = (8 - math.min(vector.magnitude(localPosition - newPos), 3))
 								if ray then
 									newPos = ray.Position + (ray.Normal * 1.5)
-									factor = (localPosition - newPos).Magnitude > 3 and 0 or factor
+									factor = vector.magnitude(localPosition - newPos) > 3 and 0 or factor
 								end
 							end
 	
-							if not flymod.Enabled and not workspace:Raycast(newPos, Vector3.new(0, -70, 0), rayCheck) then
+							if not flymod.Enabled and not workspace:Raycast(newPos, vector.create(0, -70, 0), rayCheck) then
 								newPos = entityPos
 								factor = 40
 							end
 	
 							ang += factor % 360
-							vec = ((newPos - localPosition) * Vector3.new(1, 0, 1)).Unit
-							vec = vec == vec and vec or Vector3.zero
+							vec = vector.normalize((newPos - localPosition) * vector.create(1, 0, 1))
+							vec = vec == vec and vec or vector.zero
 							TargetStrafeVector = vec
 						else
 							ent = nil
@@ -3447,7 +3447,7 @@ run(function()
 	local function Loop()
 		for ent, EntityArrow in Reference do
 			if Distance.Enabled then
-				local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
+				local distance = entitylib.isAlive and vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position) or math.huge
 				if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
 					EntityArrow.Visible = false
 					continue
@@ -3458,7 +3458,7 @@ run(function()
 			EntityArrow.Visible = not rootVis
 			if rootVis then continue end
 			
-			local dir = (gameCamera.CFrame:PointToObjectSpace(ent.RootPart.Position) * Vector3.new(1, 0, 1)).Unit
+			local dir = vector.normalize(gameCamera.CFrame:PointToObjectSpace(ent.RootPart.Position) * vector.create(1, 0, 1))
 			EntityArrow.Rotation = math.deg(math.atan2(dir.Z, dir.X))
 		end
 	end
@@ -3567,7 +3567,7 @@ run(function()
 		else
 			local chams = {}
 			for _, v in ent.Character:GetChildren() do
-				if v:IsA('BasePart') and (ent.NPC or v.Name:find('Arm') or v.Name:find('Leg') or v.Name:find('Hand') or v.Name:find('Feet') or v.Name:find('Torso') or v.Name == 'Head') then
+				if v:IsA('BasePart') and (ent.NPC or string.find(v.Name, 'Arm') or string.find(v.Name, 'Leg') or string.find(v.Name, 'Hand') or string.find(v.Name, 'Feet') or string.find(v.Name, 'Torso') or v.Name == 'Head') then
 					local box = Instance.new(v.Name == 'Head' and 'SphereHandleAdornment' or 'BoxHandleAdornment')
 					if v.Name == 'Head' then
 						box.Radius = 0.75
@@ -3956,7 +3956,7 @@ run(function()
 		Drawing2D = function()
 			for ent, EntityESP in Reference do
 				if Distance.Enabled then
-					local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
+					local distance = entitylib.isAlive and vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position) or math.huge
 					if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
 						for _, obj in EntityESP do
 							obj.Visible = false
@@ -4006,7 +4006,7 @@ run(function()
 		Drawing3D = function()
 			for ent, EntityESP in Reference do
 				if Distance.Enabled then
-					local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
+					local distance = entitylib.isAlive and vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position) or math.huge
 					if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
 						for _, obj in EntityESP do
 							obj.Visible = false
@@ -4021,14 +4021,14 @@ run(function()
 				end
 				if not rootVis then continue end
 	
-				local point1 = ESPWorldToViewport(ent.RootPart.Position + Vector3.new(1.5, ent.HipHeight, 1.5))
-				local point2 = ESPWorldToViewport(ent.RootPart.Position + Vector3.new(1.5, -ent.HipHeight, 1.5))
-				local point3 = ESPWorldToViewport(ent.RootPart.Position + Vector3.new(-1.5, ent.HipHeight, 1.5))
-				local point4 = ESPWorldToViewport(ent.RootPart.Position + Vector3.new(-1.5, -ent.HipHeight, 1.5))
-				local point5 = ESPWorldToViewport(ent.RootPart.Position + Vector3.new(1.5, ent.HipHeight, -1.5))
-				local point6 = ESPWorldToViewport(ent.RootPart.Position + Vector3.new(1.5, -ent.HipHeight, -1.5))
-				local point7 = ESPWorldToViewport(ent.RootPart.Position + Vector3.new(-1.5, ent.HipHeight, -1.5))
-				local point8 = ESPWorldToViewport(ent.RootPart.Position + Vector3.new(-1.5, -ent.HipHeight, -1.5))
+				local point1 = ESPWorldToViewport(ent.RootPart.Position + vector.create(1.5, ent.HipHeight, 1.5))
+				local point2 = ESPWorldToViewport(ent.RootPart.Position + vector.create(1.5, -ent.HipHeight, 1.5))
+				local point3 = ESPWorldToViewport(ent.RootPart.Position + vector.create(-1.5, ent.HipHeight, 1.5))
+				local point4 = ESPWorldToViewport(ent.RootPart.Position + vector.create(-1.5, -ent.HipHeight, 1.5))
+				local point5 = ESPWorldToViewport(ent.RootPart.Position + vector.create(1.5, ent.HipHeight, -1.5))
+				local point6 = ESPWorldToViewport(ent.RootPart.Position + vector.create(1.5, -ent.HipHeight, -1.5))
+				local point7 = ESPWorldToViewport(ent.RootPart.Position + vector.create(-1.5, ent.HipHeight, -1.5))
+				local point8 = ESPWorldToViewport(ent.RootPart.Position + vector.create(-1.5, -ent.HipHeight, -1.5))
 				EntityESP.Line1.From = point1
 				EntityESP.Line1.To = point2
 				EntityESP.Line2.From = point3
@@ -4058,7 +4058,7 @@ run(function()
 		DrawingSkeleton = function()
 			for ent, EntityESP in Reference do
 				if Distance.Enabled then
-					local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
+					local distance = entitylib.isAlive and vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position) or math.huge
 					if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
 						for _, obj in EntityESP do
 							obj.Visible = false
@@ -4286,9 +4286,9 @@ run(function()
 	local GamingChair = {Enabled = false}
 	local Color
 	local wheelpositions = {
-		Vector3.new(-0.8, -0.6, -0.18),
-		Vector3.new(0.1, -0.6, -0.88),
-		Vector3.new(0, -0.6, 0.7)
+		vector.create(-0.8, -0.6, -0.18),
+		vector.create(0.1, -0.6, -0.88),
+		vector.create(0, -0.6, 0.7)
 	}
 	local chairhighlight
 	local currenttween
@@ -4306,7 +4306,7 @@ run(function()
 				end
 				chair = Instance.new('MeshPart')
 				chair.Color = Color3.fromRGB(21, 21, 21)
-				chair.Size = Vector3.new(2.16, 3.6, 2.3) / Vector3.new(12.37, 20.636, 13.071)
+				chair.Size = vector.create(2.16, 3.6, 2.3) / vector.create(12.37, 20.636, 13.071)
 				chair.CanCollide = false
 				chair.Massless = true
 				chair.MeshId = 'rbxassetid://12972961089'
@@ -4337,7 +4337,7 @@ run(function()
 				chairhighlight.Parent = chair
 				local chairarms = Instance.new('MeshPart')
 				chairarms.Color = chair.Color
-				chairarms.Size = Vector3.new(1.39, 1.345, 2.75) / Vector3.new(97.13, 136.216, 234.031)
+				chairarms.Size = vector.create(1.39, 1.345, 2.75) / vector.create(97.13, 136.216, 234.031)
 				chairarms.CFrame = chair.CFrame * CFrame.new(-0.169, -1.129, -0.013)
 				chairarms.MeshId = 'rbxassetid://12972673898'
 				chairarms.CanCollide = false
@@ -4349,7 +4349,7 @@ run(function()
 				local chairlegs = Instance.new('MeshPart')
 				chairlegs.Color = chair.Color
 				chairlegs.Name = 'Legs'
-				chairlegs.Size = Vector3.new(1.8, 1.2, 1.8) / Vector3.new(10.432, 8.105, 9.488)
+				chairlegs.Size = vector.create(1.8, 1.2, 1.8) / vector.create(10.432, 8.105, 9.488)
 				chairlegs.CFrame = chair.CFrame * CFrame.new(0.047, -2.324, 0)
 				chairlegs.MeshId = 'rbxassetid://13003181606'
 				chairlegs.CanCollide = false
@@ -4357,7 +4357,7 @@ run(function()
 				local chairfan = Instance.new('MeshPart')
 				chairfan.Color = chair.Color
 				chairfan.Name = 'Fan'
-				chairfan.Size = Vector3.zero
+				chairfan.Size = vector.zero
 				chairfan.CFrame = chair.CFrame * CFrame.new(0, -1.873, 0)
 				chairfan.MeshId = 'rbxassetid://13004977292'
 				chairfan.CanCollide = false
@@ -4368,7 +4368,7 @@ run(function()
 					attachment.Position = v
 					attachment.Parent = chairlegs
 					local attachment2 = Instance.new('Attachment')
-					attachment2.Position = v + Vector3.new(0, 0, 0.18)
+					attachment2.Position = v + vector.create(0, 0, 0.18)
 					attachment2.Parent = chairlegs
 					local trail = Instance.new('Trail')
 					trail.Texture = 'http://www.roblox.com/asset/?id=13005168530'
@@ -4401,16 +4401,16 @@ run(function()
 						end
 						chair.CFrame = entitylib.character.RootPart.CFrame * CFrame.Angles(0, math.rad(-90), 0)
 						chairweld.Part1 = entitylib.character.RootPart
-						chairlegs.Velocity = Vector3.zero
+						chairlegs.Velocity = vector.zero
 						chairlegs.CFrame = chair.CFrame * CFrame.new(0.047, -2.324, 0)
-						chairfan.Velocity = Vector3.zero
-						chairfan.CFrame = chair.CFrame * CFrame.new(0.047, -1.873, 0) * CFrame.Angles(0, math.rad(tick() * 180 % 360), math.rad(180))
-						local moving = entitylib.character.Humanoid:GetState() == Enum.HumanoidStateType.Running and entitylib.character.Humanoid.MoveDirection ~= Vector3.zero
+						chairfan.Velocity = vector.zero
+						chairfan.CFrame = chair.CFrame * CFrame.new(0.047, -1.873, 0) * CFrame.Angles(0, math.rad(os.clock() * 180 % 360), math.rad(180))
+						local moving = entitylib.character.Humanoid:GetState() == Enum.HumanoidStateType.Running and entitylib.character.Humanoid.MoveDirection ~= vector.zero
 						local flying = vape.Modules.Fly and vape.Modules.Fly.Enabled or vape.Modules.LongJump and vape.Modules.LongJump.Enabled or vape.Modules.InfiniteFly and vape.Modules.InfiniteFly.Enabled
 						if movingsound.TimePosition > 1.9 then
 							movingsound.TimePosition = 0.2
 						end
-						movingsound.PlaybackSpeed = (entitylib.character.RootPart.Velocity * Vector3.new(1, 0, 1)).Magnitude / 16
+						movingsound.PlaybackSpeed = vector.magnitude(entitylib.character.RootPart.Velocity * vector.create(1, 0, 1)) / 16
 						for _, v in trails do
 							v.Enabled = not flying and moving
 							v.Color = ColorSequence.new(movingsound.PlaybackSpeed > 1.5 and Color3.new(1, 0.5, 0) or Color3.new())
@@ -4439,14 +4439,14 @@ run(function()
 									currenttween:Cancel()
 								end
 								tween = tweenService:Create(chairlegs, TweenInfo.new(0.15), {
-									Size = Vector3.zero
+									Size = vector.zero
 								})
 								tween.Completed:Connect(function(state)
 									if state == Enum.PlaybackState.Completed then
 										chairfan.Transparency = 0
 										chairlegs.Transparency = 1
 										tween = tweenService:Create(chairfan, TweenInfo.new(0.15), {
-											Size = Vector3.new(1.534, 0.328, 1.537) / Vector3.new(791.138, 168.824, 792.027)
+											Size = vector.create(1.534, 0.328, 1.537) / vector.create(791.138, 168.824, 792.027)
 										})
 										tween:Play()
 									end
@@ -4461,14 +4461,14 @@ run(function()
 								end
 								if currenttween then currenttween:Cancel() end
 								tween = tweenService:Create(chairfan, TweenInfo.new(0.15), {
-									Size = Vector3.zero
+									Size = vector.zero
 								})
 								tween.Completed:Connect(function(state)
 									if state == Enum.PlaybackState.Completed then
 										chairfan.Transparency = 1
 										chairlegs.Transparency = 0
 										tween = tweenService:Create(chairlegs, TweenInfo.new(0.15), {
-											Size = Vector3.new(1.8, 1.2, 1.8) / Vector3.new(10.432, 8.105, 9.488)
+											Size = vector.create(1.8, 1.2, 1.8) / vector.create(10.432, 8.105, 9.488)
 										})
 										tween:Play()
 									end
@@ -4698,7 +4698,7 @@ run(function()
 	
 				if Distance.Enabled then
 					Strings[ent] = '[%s] '..Strings[ent]
-					nametag.Text.Text = entitylib.isAlive and string.format(Strings[ent], math.floor((entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude)) or Strings[ent]
+					nametag.Text.Text = entitylib.isAlive and string.format(Strings[ent], math.floor(vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position))) or Strings[ent]
 				else
 					nametag.Text.Text = Strings[ent]
 				end
@@ -4728,21 +4728,21 @@ run(function()
 		Normal = function()
 			for ent, nametag in Reference do
 				if DistanceCheck.Enabled then
-					local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
+					local distance = entitylib.isAlive and vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position) or math.huge
 					if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
 						nametag.Visible = false
 						continue
 					end
 				end
 	
-				local headPos, headVis = gameCamera:WorldToViewportPoint(ent.RootPart.Position + Vector3.new(0, ent.HipHeight + 1, 0))
+				local headPos, headVis = gameCamera:WorldToViewportPoint(ent.RootPart.Position + vector.create(0, ent.HipHeight + 1, 0))
 				nametag.Visible = headVis
 				if not headVis then
 					continue
 				end
 	
 				if Distance.Enabled then
-					local mag = entitylib.isAlive and math.floor((entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude) or 0
+					local mag = entitylib.isAlive and math.floor(vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position)) or 0
 					if Sizes[ent] ~= mag then
 						nametag.Text = string.format(Strings[ent], mag)
 						local ize = getfontsize(removeTags(nametag.Text), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000))
@@ -4756,7 +4756,7 @@ run(function()
 		Drawing = function()
 			for ent, nametag in Reference do
 				if DistanceCheck.Enabled then
-					local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math.huge
+					local distance = entitylib.isAlive and vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position) or math.huge
 					if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
 						nametag.Text.Visible = false
 						nametag.BG.Visible = false
@@ -4764,7 +4764,7 @@ run(function()
 					end
 				end
 	
-				local headPos, headVis = gameCamera:WorldToScreenPoint(ent.RootPart.Position + Vector3.new(0, ent.HipHeight + 1, 0))
+				local headPos, headVis = gameCamera:WorldToScreenPoint(ent.RootPart.Position + vector.create(0, ent.HipHeight + 1, 0))
 				nametag.Text.Visible = headVis
 				nametag.BG.Visible = headVis
 				if not headVis then
@@ -4772,7 +4772,7 @@ run(function()
 				end
 	
 				if Distance.Enabled then
-					local mag = entitylib.isAlive and math.floor((entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude) or 0
+					local mag = entitylib.isAlive and math.floor(vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position)) or 0
 					if Sizes[ent] ~= mag then
 						nametag.Text.Text = string.format(Strings[ent], mag)
 						nametag.BG.Size = Vector2.new(nametag.Text.TextBounds.X + 8, nametag.Text.TextBounds.Y + 7)
@@ -4964,7 +4964,7 @@ run(function()
 		end
 		local root = ent.RootPart
 		local part = Instance.new('Part')
-		part.Size = Vector3.new(3, 3, 3)
+		part.Size = vector.create(3, 3, 3)
 		part.CFrame = root.CFrame * CFrame.Angles(math.rad(Rots[1].Value), math.rad(Rots[2].Value), math.rad(Rots[3].Value))
 		part.CanCollide = false
 		part.CanQuery = false
@@ -4973,7 +4973,7 @@ run(function()
 		local meshd = Instance.new('SpecialMesh')
 		meshd.MeshId = Mesh.Value
 		meshd.TextureId = Texture.Value
-		meshd.Scale = Vector3.one * Scale.Value
+		meshd.Scale = vector.one * Scale.Value
 		meshd.Parent = part
 		local weld = Instance.new('WeldConstraint')
 		weld.Part0 = part
@@ -5022,7 +5022,7 @@ run(function()
 		Decimal = 100,
 		Function = function(val)
 			for _, part in models do 
-				part.Mesh.Scale = Vector3.one * val
+				part.Mesh.Scale = vector.one * val
 			end
 		end
 	})
@@ -5142,7 +5142,7 @@ run(function()
 				Radar:Clean(runService.RenderStepped:Connect(function()
 					for ent, EntityDot in Reference do
 						if entitylib.isAlive then
-							local dt = CFrame.lookAlong(entitylib.character.RootPart.Position, gameCamera.CFrame.LookVector * Vector3.new(1, 0, 1)):PointToObjectSpace(ent.RootPart.Position)
+							local dt = CFrame.lookAlong(entitylib.character.RootPart.Position, gameCamera.CFrame.LookVector * vector.create(1, 0, 1)):PointToObjectSpace(ent.RootPart.Position)
 							EntityDot.Position = UDim2.fromOffset(Clamp.Enabled and math.clamp(108 + dt.X, 2, 214) or 108 + dt.X, Clamp.Enabled and math.clamp(108 + dt.Z, 8, 214) or 108 + dt.Z)
 						end
 					end
@@ -5532,7 +5532,7 @@ run(function()
 		local startVector = StartPosition.Value == 'Mouse' and inputService:GetMouseLocation() or Vector2.new(screenSize.X / 2, (StartPosition.Value == 'Middle' and screenSize.Y / 2 or screenSize.Y))
 	
 		for ent, EntityTracer in Reference do
-			local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude
+			local distance = entitylib.isAlive and vector.magnitude(entitylib.character.RootPart.Position - ent.RootPart.Position)
 			if Distance.Enabled and distance then
 				if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
 					EntityTracer.Visible = false
@@ -5544,7 +5544,7 @@ run(function()
 			local rootPos, rootVis = gameCamera:WorldToViewportPoint(pos)
 			if not rootVis and Behind.Enabled then
 				local tempPos = gameCamera.CFrame:PointToObjectSpace(pos)
-				tempPos = CFrame.Angles(0, 0, (math.atan2(tempPos.Y, tempPos.X) + math.pi)):VectorToWorldSpace((CFrame.Angles(0, math.rad(89.9), 0):VectorToWorldSpace(Vector3.new(0, 0, -1))))
+				tempPos = CFrame.Angles(0, 0, (math.atan2(tempPos.Y, tempPos.X) + math.pi)):VectorToWorldSpace((CFrame.Angles(0, math.rad(89.9), 0):VectorToWorldSpace(vector.create(0, 0, -1))))
 				rootPos = gameCamera:WorldToViewportPoint(gameCamera.CFrame:pointToWorldSpace(tempPos))
 				rootVis = true
 			end
@@ -5696,7 +5696,7 @@ run(function()
 					local tagSize = getfontsize(removeTags(split[2]), 14 * Scale.Value, FontOption.Value, Vector2.new(100000, 100000))
 					local billboard = Instance.new('BillboardGui')
 					billboard.Size = UDim2.fromOffset(tagSize.X + 8, tagSize.Y + 7)
-					billboard.StudsOffsetWorldSpace = Vector3.new(unpack(split[1]:split(',')))
+					billboard.StudsOffsetWorldSpace = vector.create(unpack(split[1]:split(',')))
 					billboard.AlwaysOnTop = true
 					billboard.Parent = WaypointFolder
 					local tag = Instance.new('TextLabel')
@@ -5907,7 +5907,7 @@ run(function()
 			if callback then
 				local check
 				AutoRejoin:Clean(guiService.ErrorMessageChanged:Connect(function(str)
-					if (not check or guiService:GetErrorCode() ~= Enum.ConnectionError.DisconnectLuaKick) and guiService:GetErrorCode() ~= Enum.ConnectionError.DisconnectConnectionLost and not str:lower():find('ban') then
+					if (not check or guiService:GetErrorCode() ~= Enum.ConnectionError.DisconnectLuaKick) and guiService:GetErrorCode() ~= Enum.ConnectionError.DisconnectConnectionLost and not string.find(string.lower(str), 'ban') then
 						check = true
 						serverHop(nil, Sort.Value)
 					end
@@ -5943,7 +5943,7 @@ run(function()
 	
 				repeat
 					local physicsrate, senderrate = '0', Type.Value == 'All' and '-1' or '60'
-					if AutoSend.Enabled and tick() % (AutoSendLength.Value + 0.1) > AutoSendLength.Value then
+					if AutoSend.Enabled and os.clock() % (AutoSendLength.Value + 0.1) > AutoSendLength.Value then
 						physicsrate, senderrate = '15', '60'
 					end
 	
@@ -6013,7 +6013,7 @@ run(function()
 				elseif replicatedStorage:FindFirstChild('DefaultChatSystemChatEvents') then
 					if Hide.Enabled then
 						oldchat = hookfunction(getconnections(replicatedStorage.DefaultChatSystemChatEvents.OnNewSystemMessage.OnClientEvent)[1].Function, function(data, ...)
-							if data.Message:find('ChatFloodDetector') then return end
+							if string.find(data.Message, 'ChatFloodDetector') then return end
 							return oldchat(data, ...)
 						end)
 					end
@@ -6190,7 +6190,7 @@ run(function()
 		local highest = math.huge
 		for _, v in roles do
 			local low = v.Name:lower()
-			if (low:find('admin') or low:find('mod') or low:find('dev')) and v.Rank < highest then
+			if (string.find(low, 'admin') or string.find(low, 'mod') or string.find(low, 'dev')) and v.Rank < highest then
 				highest = v.Rank
 			end
 		end
@@ -6246,12 +6246,12 @@ run(function()
 						if placeinfo.Creator.CreatorType ~= 'Group' then
 							local desc = placeinfo.Description:split('\n')
 							for _, str in desc do
-								local _, begin = str:find('roblox.com/groups/')
+								local _, begin = string.find(str, 'roblox.com/groups/')
 								if begin then
-									local endof = str:find('/', begin + 1)
+									local endof = string.find(str, '/', begin + 1)
 									placeinfo = {Creator = {
 										CreatorType = 'Group', 
-										CreatorTargetId = str:sub(begin + 1, endof - 1)
+										CreatorTargetId = string.sub(str, begin + 1, endof - 1)
 									}}
 								end
 							end
@@ -6351,7 +6351,7 @@ run(function()
 	
 				if module and module.activeCameraController and Freecam.Enabled then
 					old = module.activeCameraController.GetSubjectPosition
-					local camPos = old(module.activeCameraController) or Vector3.zero
+					local camPos = old(module.activeCameraController) or vector.zero
 					module.activeCameraController.GetSubjectPosition = function()
 						return camPos
 					end
@@ -6362,7 +6362,7 @@ run(function()
 							local side = (inputService:IsKeyDown(Enum.KeyCode.A) and -1 or 0) + (inputService:IsKeyDown(Enum.KeyCode.D) and 1 or 0)
 							local up = (inputService:IsKeyDown(Enum.KeyCode.Q) and -1 or 0) + (inputService:IsKeyDown(Enum.KeyCode.E) and 1 or 0)
 							dt = dt * (inputService:IsKeyDown(Enum.KeyCode.LeftShift) and 0.25 or 1)
-							camPos = (CFrame.lookAlong(camPos, gameCamera.CFrame.LookVector) * CFrame.new(Vector3.new(side, up, forward) * (Value.Value * dt))).Position
+							camPos = (CFrame.lookAlong(camPos, gameCamera.CFrame.LookVector) * CFrame.new(vector.create(side, up, forward) * (Value.Value * dt))).Position
 						end
 					end))
 	
@@ -6426,7 +6426,7 @@ run(function()
 				else
 					Gravity:Clean(runService.PreSimulation:Connect(function(dt)
 						if entitylib.isAlive and entitylib.character.Humanoid.FloorMaterial == Enum.Material.Air then
-							entitylib.character.RootPart.AssemblyLinearVelocity += Vector3.new(0, dt * (workspace.Gravity - Value.Value), 0)
+							entitylib.character.RootPart.AssemblyLinearVelocity += vector.create(0, dt * (workspace.Gravity - Value.Value), 0)
 						end
 					end))
 				end
@@ -6504,11 +6504,11 @@ run(function()
 						rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
 						local root = entitylib.character.RootPart
 						local movedir = root.Position + vec
-						local ray = workspace:Raycast(movedir, Vector3.new(0, -15, 0), rayCheck)
+						local ray = workspace:Raycast(movedir, vector.create(0, -15, 0), rayCheck)
 						if not ray then
-							local check = workspace:Blockcast(root.CFrame, Vector3.new(3, 1, 3), Vector3.new(0, -(entitylib.character.HipHeight + 1), 0), rayCheck)
+							local check = workspace:Blockcast(root.CFrame, vector.create(3, 1, 3), vector.create(0, -(entitylib.character.HipHeight + 1), 0), rayCheck)
 							if check then
-								vec = (check.Instance:GetClosestPointOnSurface(movedir) - root.Position) * Vector3.new(1, 0, 1)
+								vec = (check.Instance:GetClosestPointOnSurface(movedir) - root.Position) * vector.create(1, 0, 1)
 							end
 						end
 					end
@@ -6572,7 +6572,7 @@ run(function()
 	local function itemAdded(v, plr)
 		if v:IsA('Tool') then
 			local check = v:FindFirstChild('IsGun') and 'sheriff' or v:FindFirstChild('KnifeServer') and 'murderer' or nil
-			check = check or v.Name:lower():find('knife') and 'murderer' or v.Name:lower():find('gun') and 'sheriff' or nil
+			check = check or string.find(string.lower(v.Name), 'knife') and 'murderer' or string.find(string.lower(v.Name), 'gun') and 'sheriff' or nil
 			if check == 'murderer' and plr ~= murderer then
 				murderer = plr
 				if plr.Character then
@@ -6794,9 +6794,9 @@ run(function()
 		Function = function(callback)
 			if callback then
 				point = Instance.new('Attachment')
-				point.Position = Vector3.new(0, Thickness.Value - 2.7, 0)
+				point.Position = vector.create(0, Thickness.Value - 2.7, 0)
 				point2 = Instance.new('Attachment')
-				point2.Position = Vector3.new(0, -Thickness.Value - 2.7, 0)
+				point2.Position = vector.create(0, -Thickness.Value - 2.7, 0)
 				trail = Instance.new('Trail')
 				trail.Texture = Texture.Value == '' and 'http://www.roblox.com/asset/?id=14166981368' or Texture.Value
 				trail.TextureMode = Enum.TextureMode.Static
@@ -6875,10 +6875,10 @@ run(function()
 		Decimal = 100,
 		Function = function(val)
 			if point then
-				point.Position = Vector3.new(0, val - 2.7, 0)
+				point.Position = vector.create(0, val - 2.7, 0)
 			end
 			if point2 then
-				point2.Position = Vector3.new(0, -val - 2.7, 0)
+				point2.Position = vector.create(0, -val - 2.7, 0)
 			end
 		end,
 		Suffix = function(val)
@@ -6911,7 +6911,7 @@ run(function()
 		Function = function(callback)
 			if callback then
 				part = Instance.new('Part')
-				part.Size = Vector3.new(2, 4, 0.1)
+				part.Size = vector.create(2, 4, 0.1)
 				part.CanCollide = false
 				part.CanQuery = false
 				part.Massless = true
@@ -6925,7 +6925,7 @@ run(function()
 				capesurface.Adornee = part
 				capesurface.Parent = part
 	
-				if Texture.Value:find('.webm') then
+				if string.find(Texture.Value, '.webm') then
 					local decal = Instance.new('VideoFrame')
 					decal.Video = getcustomasset(Texture.Value)
 					decal.Size = UDim2.fromScale(1, 1)
@@ -6935,7 +6935,7 @@ run(function()
 					decal:Play()
 				else
 					local decal = Instance.new('ImageLabel')
-					decal.Image = Texture.Value ~= '' and (Texture.Value:find('rbxasset') and Texture.Value or assetfunction(Texture.Value)) or 'rbxassetid://14637958134'
+					decal.Image = Texture.Value ~= '' and (string.find(Texture.Value, 'rbxasset') and Texture.Value or assetfunction(Texture.Value)) or 'rbxassetid://14637958134'
 					decal.Size = UDim2.fromScale(1, 1)
 					decal.BackgroundTransparency = 1
 					decal.Parent = capesurface
@@ -6948,11 +6948,11 @@ run(function()
 	
 				repeat
 					if motor and entitylib.isAlive then
-						local velo = math.min(entitylib.character.RootPart.Velocity.Magnitude, 90)
-						motor.DesiredAngle = math.rad(6) + math.rad(velo) + (velo > 1 and math.abs(math.cos(tick() * 5)) / 3 or 0)
+						local velo = math.min(vector.magnitude(entitylib.character.RootPart.Velocity), 90)
+						motor.DesiredAngle = math.rad(6) + math.rad(velo) + (velo > 1 and math.abs(math.cos(os.clock() * 5)) / 3 or 0)
 					end
-					capesurface.Enabled = (gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude > 0.6
-					part.Transparency = (gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude > 0.6 and 0 or 1
+					capesurface.Enabled = vector.magnitude(gameCamera.CFrame.Position - gameCamera.Focus.Position) > 0.6
+					part.Transparency = vector.magnitude(gameCamera.CFrame.Position - gameCamera.Focus.Position) > 0.6 and 0 or 1
 					task.wait()
 				until not Cape.Enabled
 			else
@@ -6981,7 +6981,7 @@ run(function()
 					setthreadidentity(8)
 				end
 				hat = Instance.new('MeshPart')
-				hat.Size = Vector3.new(3, 0.7, 3)
+				hat.Size = vector.create(3, 0.7, 3)
 				hat.Name = 'ChinaHat'
 				hat.Material = Enum.Material[Material.Value]
 				hat.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
@@ -6991,7 +6991,7 @@ run(function()
 				hat.MeshId = 'http://www.roblox.com/asset/?id=1778999'
 				hat.Transparency = 1 - Color.Opacity
 				hat.Parent = gameCamera
-				hat.CFrame = entitylib.isAlive and entitylib.character.Head.CFrame + Vector3.new(0, 1, 0) or CFrame.identity
+				hat.CFrame = entitylib.isAlive and entitylib.character.Head.CFrame + Vector3.yAxis or CFrame.identity
 				local weld = Instance.new('WeldConstraint')
 				weld.Part0 = hat
 				weld.Part1 = entitylib.isAlive and entitylib.character.Head or nil
@@ -7002,8 +7002,8 @@ run(function()
 						weld:Destroy() 
 					end
 					hat.Parent = gameCamera
-					hat.CFrame = char.Head.CFrame + Vector3.new(0, 1, 0)
-					hat.Velocity = Vector3.zero
+					hat.CFrame = char.Head.CFrame + Vector3.yAxis
+					hat.Velocity = vector.zero
 					weld = Instance.new('WeldConstraint')
 					weld.Part0 = hat
 					weld.Part1 = char.Head
@@ -7011,7 +7011,7 @@ run(function()
 				end))
 	
 				repeat
-					hat.LocalTransparencyModifier = ((gameCamera.CFrame.Position - gameCamera.Focus.Position).Magnitude <= 0.6 and 1 or 0)
+					hat.LocalTransparencyModifier = (vector.magnitude(gameCamera.CFrame.Position - gameCamera.Focus.Position) <= 0.6 and 1 or 0)
 					task.wait()
 				until not ChinaHat.Enabled
 			else
@@ -7310,15 +7310,15 @@ run(function()
 			if callback then
 				local frames = {}
 				local startClock = os.clock()
-				local updateTick = tick()
+				local updateTick = os.clock()
 				FPS:Clean(runService.Heartbeat:Connect(function()
 					local updateClock = os.clock()
 					for i = #frames, 1, -1 do
 						frames[i + 1] = frames[i] >= updateClock - 1 and frames[i] or nil
 					end
 					frames[1] = updateClock
-					if updateTick < tick() then
-						updateTick = tick() + 1
+					if updateTick < os.clock() then
+						updateTick = os.clock() + 1
 						label.Text = math.floor(os.clock() - startClock >= 1 and #frames or #frames / (os.clock() - startClock))..' FPS'
 					end
 				end))
@@ -7594,7 +7594,7 @@ run(function()
 	local FOVValue = {}
 	local Volume
 	local alreadypicked = {}
-	local beattick = tick()
+	local beattick = os.clock()
 	local oldfov, songobj, songbpm, songtween
 	
 	local function choosesong()
@@ -7628,7 +7628,7 @@ run(function()
 		songobj.SoundId = assetfunction(split[1])
 		repeat task.wait() until songobj.IsLoaded or not SongBeats.Enabled
 		if SongBeats.Enabled then
-			beattick = tick() + (tonumber(split[3]) or 0)
+			beattick = os.clock() + (tonumber(split[3]) or 0)
 			songbpm = 60 / (tonumber(split[2]) or 50)
 			songobj:Play()
 		end
@@ -7647,8 +7647,8 @@ run(function()
 					if not songobj.Playing then
 						choosesong()
 					end
-					if beattick < tick() and SongBeats.Enabled and FOV.Enabled then
-						beattick = tick() + songbpm
+					if beattick < os.clock() and SongBeats.Enabled and FOV.Enabled then
+						beattick = os.clock() + songbpm
 						gameCamera.FieldOfView = oldfov - FOVValue.Value
 						songtween = tweenService:Create(gameCamera, TweenInfo.new(math.min(songbpm, 0.2), Enum.EasingStyle.Linear), {
 							FieldOfView = oldfov
@@ -7719,10 +7719,10 @@ run(function()
 		Function = function(callback)
 			if callback then
 				repeat
-					local lastpos = entitylib.isAlive and entitylib.character.HumanoidRootPart.Position * Vector3.new(1, 0, 1) or Vector3.zero
+					local lastpos = entitylib.isAlive and entitylib.character.HumanoidRootPart.Position * vector.create(1, 0, 1) or vector.zero
 					local dt = task.wait(0.2)
-					local newpos = entitylib.isAlive and entitylib.character.HumanoidRootPart.Position * Vector3.new(1, 0, 1) or Vector3.zero
-					label.Text = math.round(((lastpos - newpos) / dt).Magnitude)..' sps'
+					local newpos = entitylib.isAlive and entitylib.character.HumanoidRootPart.Position * vector.create(1, 0, 1) or vector.zero
+					label.Text = math.round(vector.magnitude((lastpos - newpos) / dt))..' sps'
 				until not Speedmeter.Enabled
 			end
 		end,

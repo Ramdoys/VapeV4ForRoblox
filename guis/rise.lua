@@ -248,7 +248,7 @@ local function downloadFile(path, func)
 		if not suc or res == '404: Not Found' then
 			error(res)
 		end
-		if path:find('.lua') then
+		if string.find(path, '.lua') then
 			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res
 		end
 		writefile(path, res)
@@ -359,7 +359,7 @@ do
 		uipallet.Main = res.Main and Color3.fromRGB(unpack(res.Main)) or uipallet.Main
 		uipallet.Text = res.Text and Color3.fromRGB(unpack(res.Text)) or uipallet.Text
 		uipallet.Font = res.Font and Font.new(
-			res.Font:find('rbxasset') and res.Font or string.format('rbxasset://fonts/families/%s.json', res.Font)
+			string.find(res.Font, 'rbxasset') and res.Font or string.format('rbxasset://fonts/families/%s.json', res.Font)
 		) or uipallet.Font
 		uipallet.FontSemiBold = Font.new(uipallet.Font.Family, Enum.FontWeight.SemiBold)
 		uipallet.FontLight = Font.new(uipallet.Font.Family, Enum.FontWeight.Light)
@@ -623,13 +623,13 @@ components = {
 			end
 		end
 		
-		local doubleClick = tick()
+		local doubleClick = os.clock()
 		slider.InputBegan:Connect(function(inputObj)
 			if (inputObj.UserInputType == Enum.UserInputType.MouseButton1 or inputObj.UserInputType == Enum.UserInputType.Touch) then
-				if doubleClick > tick() then
+				if doubleClick > os.clock() then
 					optionapi:Toggle()
 				end
-				doubleClick = tick() + 0.3
+				doubleClick = os.clock() + 0.3
 				local changed = inputService.InputChanged:Connect(function(input)
 					if input.UserInputType == (inputObj.UserInputType == Enum.UserInputType.MouseButton1 and Enum.UserInputType.MouseMovement or Enum.UserInputType.Touch) then
 						optionapi:SetValue(math.clamp((input.Position.X - bkg.AbsolutePosition.X) / bkg.AbsoluteSize.X, 0, 1))
@@ -1621,7 +1621,7 @@ function mainapi:UpdateGUI() end
 
 task.spawn(function()
 	repeat
-		local hue = tick() * (0.2 * mainapi.RainbowSpeed.Value) % 1
+		local hue = os.clock() * (0.2 * mainapi.RainbowSpeed.Value) % 1
 		for _, v in mainapi.RainbowTable do
 			v:SetValue(hue)
 		end
@@ -1739,7 +1739,7 @@ function mainapi:CreateCategory(categorysettings)
 		modulesettings.Tooltip = modulesettings.Tooltip or 'None'
 		local desc = Instance.new('TextLabel')
 		desc.Size = UDim2.fromOffset(200, 24)
-		desc.Position = UDim2.fromOffset(13, 45 - (modulesettings.Tooltip:find('\n') and 10 or 0))
+		desc.Position = UDim2.fromOffset(13, 45 - (string.find(modulesettings.Tooltip, '\n') and 10 or 0))
 		desc.BackgroundTransparency = 1
 		desc.Text = modulesettings.Tooltip
 		desc.TextColor3 = color.Dark(uipallet.Text, 0.6)
@@ -2397,7 +2397,7 @@ function mainapi:Remove(obj)
 		end
 
 		for _, v in {'Object', 'Children', 'Toggle', 'Button'} do
-			local childobj = typeof(newobj[v]) == 'table' and newobj[v].Object or newobj[v]
+			local childobj = type(newobj[v]) == 'table' and newobj[v].Object or newobj[v]
 			if typeof(childobj) == 'Instance' then
 				childobj:Destroy()
 				childobj:ClearAllChildren()
@@ -3097,12 +3097,12 @@ targetinfo = {
 		local entitylib = mainapi.Libraries
 		if not entitylib then return end
 		for i, v in self.Targets do
-			if v < tick() then
+			if v < os.clock() then
 				self.Targets[i] = nil
 			end
 		end
 
-		local v, highest = nil, tick()
+		local v, highest = nil, os.clock()
 		for i, check in self.Targets do
 			if check > highest then
 				v = i

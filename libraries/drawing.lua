@@ -112,7 +112,7 @@ commchannel.Event:Connect(function(...)
 	else
 		if key == 'new' then
 			local obj = Drawing.new(args[1])
-			local ref = httpService:GenerateGUID():sub(1, 6)
+			local ref = string.sub(httpService:GenerateGUID(), 1, 6)
 			local props = {}
 			for _, v in classes.Base do
 				props[v] = obj[v]
@@ -135,7 +135,7 @@ commchannel.Event:Connect(function(...)
 			local obj = drawingrefs[args[1]]
 			if obj then
 				pcall(function()
-					obj:Remove()
+					obj:Destroy()
 				end)
 				drawingrefs[args[1]] = nil
 			end
@@ -169,7 +169,7 @@ if isactor and not Drawing then
 
 	getgenv().Drawing = {
 		new = function(objtype)
-			local newid = httpService:GenerateGUID(true):sub(1, 6)
+			local newid = string.sub(httpService:GenerateGUID(), 1, 6)
 			commchannel:Fire(false, 'new', objtype, newid)
 			repeat task.wait() until queued[newid]
 			local obj = queued[newid]
@@ -180,7 +180,7 @@ if isactor and not Drawing then
 			task.cancel(thread)
 			for _, v in drawingrefs do
 				pcall(function()
-					v:Remove()
+					v:Destroy()
 				end)
 			end
 			table.clear(drawingrefs)
